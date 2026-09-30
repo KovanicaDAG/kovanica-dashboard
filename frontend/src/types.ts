@@ -1,0 +1,267 @@
+// Kovanica API Types - matches node API surface
+
+export interface ApiHead {
+  network: string;
+  genesis: string;
+  tip: string;
+  blocks: number;
+  min_fee: number;
+  atom: number;
+  native_minted?: number;
+  native_total?: number;
+  native_circulating?: number;
+  native_burned?: number;
+  native_max_supply?: number;
+  subsidy?: number;
+  blue_score?: number;
+  k?: number;
+}
+
+export interface ApiBootstrap extends ApiHead {
+  listen: string;
+  peers: string[];
+  token: string;
+  k: number;
+  subsidy: number;
+  founder_amount: number;
+  founder_seed: string;
+  source?: string;
+  upstream?: { ok: true; head: ApiHead } | { ok: false; error: string };
+  finality_depth?: number;
+  payload_pruning_depth?: number;
+  authorities?: string[];
+  authority_threshold?: number;
+  slot_duration?: number;
+}
+
+export interface ApiOutput {
+  address: string;
+  value: number;
+  asset_id: string | null;
+  script_version: number;
+  script_pubkey: string;
+}
+
+export interface ApiTx {
+  id: string;
+  version: number;
+  inputs: Array<{ outpoint: { tx: string; index: number }; signature: string }>;
+  outputs: ApiOutput[];
+  lock_time: number;
+  size: number;
+  fee: number;
+}
+
+export interface ApiDagBlock {
+  id: string;
+  parents: string[];
+  height: number;
+  blue_score: number;
+  timestamp: number;
+  miner: string;
+  txs: string[];
+  is_blue: boolean;
+  selected_parent: string;
+  authority_sig?: string;
+}
+
+export interface ApiUtxo {
+  outpoint: { tx: string; index: number };
+  output: ApiOutput;
+  height: number;
+  is_coinbase: boolean;
+}
+
+export interface ApiUtxos {
+  address: string;
+  balance: number;
+  utxos: ApiUtxo[];
+  balances?: Array<{ asset_id: string | null; balance: number }>;
+}
+
+export interface ApiHistoryTx {
+  id: string;
+  height: number;
+  timestamp: number;
+  is_sender: boolean;
+  counterparty: string;
+  amount: number;
+  fee: number;
+  asset_id: string | null;
+}
+
+export interface ApiHistory {
+  address: string;
+  balance: number;
+  txs: ApiHistoryTx[];
+}
+
+export interface ApiNode {
+  blocks: number;
+  tips: string[];
+  selected_tip: string;
+  blue_score: number;
+  blue_work: number;
+  k: number;
+  subsidy: number;
+  issuance: number;
+  halving_era: number;
+  min_fee: number;
+  genesis: string;
+  supply: number;
+  token: string;
+  decimals: number;
+  miner: string;
+  atom: number;
+  ui: string;
+  utxos: number;
+  chain_len: number;
+  mempool: number;
+  tx_count: number;
+  dag: ApiDagBlock[];
+  order: string[];
+  pending: string[];
+}
+
+export interface MeshNode {
+  name: string;
+  blocks: number;
+  tip: string;
+  peers: number;
+  mempool: number;
+}
+
+export interface MeshEvent {
+  at: string;
+  from: string;
+  to: string;
+  kind: string;
+}
+
+export interface MeshState {
+  now: number;
+  queued: number;
+  nodes: MeshNode[];
+  events: MeshEvent[];
+}
+
+export interface ApiState {
+  selected: string;
+  mining: boolean;
+  faucet: boolean;
+  allow_reset: boolean;
+  operator: boolean;
+  network: string;
+  listen: string;
+  peers: string[];
+  mesh: MeshState;
+  node: ApiNode;
+  wallets: Array<{ seed: number; address: string; balance: number }>;
+  source?: string;
+}
+
+export interface ApiAddress {
+  address: string;
+  balance: number;
+  utxos: ApiUtxo[];
+  txs: ApiHistoryTx[];
+  page: number;
+  per_page: number;
+  total: number;
+}
+
+export interface ApiNft {
+  id: string;
+  collection_id: string;
+  owner: string;
+  metadata_uri: string;
+  metadata_hash: string;
+  mint_height: number;
+  mint_txid: string;
+}
+
+export interface ApiCollection {
+  id: string;
+  name: string;
+  symbol: string;
+  creator: string;
+  total_supply: number;
+  minted: number;
+  royalty_bps: number;
+  metadata_uri: string;
+}
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  total_supply: number;
+  minted: number;
+  owner: string;
+  is_nft: boolean;
+}
+
+export interface ApiDexToken {
+  asset_id: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  reserve_kvnc: number;
+  reserve_asset: number;
+  price_kvnc: number;
+  volume_24h: number;
+}
+
+export interface FeeEstimate {
+  slow: number;
+  normal: number;
+  fast: number;
+}
+
+export interface WsBlockMsg {
+  type: 'block';
+  id: string;
+  blue_score: number;
+}
+
+export interface WsTxMsg {
+  type: 'tx';
+  id: string;
+  from: string;
+  to: string;
+  amount: number;
+}
+
+export interface WsTipMsg {
+  type: 'tip';
+  id: string;
+  blue_score: number;
+}
+
+export interface WsPeerMsg {
+  type: 'peer';
+  addr: string;
+  connected: boolean;
+}
+
+export interface WsStateMsg {
+  type: 'state';
+  snapshot: string; // JSON string
+}
+
+export interface WsPingMsg { type: 'ping'; }
+export interface WsPongMsg { type: 'pong'; }
+
+export type WsMsg = WsBlockMsg | WsTxMsg | WsTipMsg | WsPeerMsg | WsStateMsg | WsPingMsg | WsPongMsg;
+
+export interface SupplyData {
+  minted: number;
+  total: number;
+  circulating: number;
+  burned: number;
+  max: number;
+  subsidy: number;
+  era: number;
+  percent: number;
+}
