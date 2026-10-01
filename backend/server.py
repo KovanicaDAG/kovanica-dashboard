@@ -122,7 +122,7 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # POST /api/submit -> /api/submit_tx
         if path == "/api/submit":
             return "/api/submit_tx"
-        # POST /api/prepare - not available on node, handled via mock
+        # POST /api/prepare - handled specially in proxy_to_seed (converts to query params)
         # POST /api/faucet - not available on node, handled via mock
         # POST /api/htlc/* - not available on node, handled via mock
         # POST /api/mine/*, /api/produce - node has /api/mine/submit
@@ -130,10 +130,80 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # POST /api/multisig/* - these exist on node
         return path
 
+    def get_node_wallet(self, host):
+        """Fetch the first funded wallet address from the node's /api/state."""
+        try:
+            url = f"http://{host}/api/state"
+            req = urllib.request.Request(url, method="GET")
+            req.add_header("Accept", "application/json")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+                wallets = data.get("wallets", [])
+                for wallet in wallets:
+                    if wallet.get("balance", 0) > 0:
+                        return wallet.get("address")
+                # Fallback to first wallet
+                if wallets:
+                    return wallets[0].get("address")
+        except Exception:
+            pass
+        return None
+
     def proxy_to_seed(self, method, path, body, seed=None):
         if seed is None:
             seed = "seed1"  # default
         host = SEED_NODES.get(seed, "127.0.0.1:8081")
+        
+        # Special handling for /api/prepare - convert JSON body to query params
+        if method == "POST" and path == "/api/prepare" and body:
+            try:
+                req_body = json.loads(body.decode())
+                to_address = req_body.get("address") or req_body.get("to")
+                amount = req_body.get("amount")
+                asset_id = req_body.get("asset_id", "KVNC")
+                
+                if to_address and amount:
+                    # Get a funded wallet from the node as sender
+                    from_address = self.get_node_wallet(host)
+                    if from_address:
+                        # Build query parameters for node's /api/prepare
+                        from urllib.parse import urlencode
+                        params = urlencode({
+                            "from": from_address,
+                            "to": to_address,
+                            "amount": str(amount)
+                        })
+                        mapped_path = f"/api/prepare?{params}"
+                        url = f"http://{host}{mapped_path}"
+                        req = urllib.request.Request(url, method="POST")
+                        req.add_header("Accept", "application/json")
+                        
+                        try:
+                            with urllib.request.urlopen(req, timeout=10) as resp:
+                                data = resp.read()
+                                self.send_response(resp.status)
+                                self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
+                                self.send_header("Content-Length", str(len(data)))
+                                self.end_headers()
+                                self.wfile.write(data)
+                                return
+                        except urllib.error.HTTPError as e:
+                            self.send_response(e.code)
+                            self.send_header("Content-Type", "application/json")
+                            self.end_headers()
+                            self.wfile.write(e.read())
+                            return
+                        except Exception:
+                            pass  # Fall through to default handling
+            except json.JSONDecodeError:
+                pass  # Fall through to default handling
+        
+        # Handle endpoints that don't exist on the node - return mock directly
+        api_path = path[5:] if path.startswith("/api/") else path
+        if method == "POST" and api_path == "token/create":
+            return self.handle_mock_token_create(body)
+        if method == "POST" and api_path.startswith("htlc/"):
+            return self.handle_mock_htlc(api_path, body)
         
         # Map dashboard API paths to actual node explorer API paths
         mapped_path = self.map_api_path(path)
@@ -161,7 +231,7 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if s == seed:
                     continue
                 try:
-                    url2 = f"http://{h}{path}"
+                    url2 = f"http://{h}{mapped_path}"
                     req2 = urllib.request.Request(url2, data=body, method=method)
                     req2.add_header("Content-Type", "application/json")
                     req2.add_header("Accept", "application/json")
