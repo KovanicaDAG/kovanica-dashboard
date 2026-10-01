@@ -109,7 +109,7 @@ export function AssetsPanel() {
           placeholder={suggestion ?? '32-byte hex identifier'}
           value={assetId}
           onChange={(e) => setAssetId(e.target.value)}
-          error={assetId && !idValid ? 'Must be exactly 64 hex characters.' : undefined}
+          className={assetId && !idValid ? 'border-destructive' : ''}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Decimals (display only)" value={decimals} onChange={(e) => setDecimals(e.target.value)} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Badge, Table } from './ui';
-import { PanelTabs } from './ui/PanelTabs';
+import { PanelTabs } from '@/components/ui';
 import { Copy, AlertCircle, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import { fmtKvnc } from '../hooks/useApi';
 import { postApi } from '../hooks/useApi';
@@ -101,7 +101,7 @@ export function HtlcPanel({}: HtlcPanelProps) {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" loading={loading} variant={step === 'redeem' ? 'primary' : step === 'refund' ? 'danger' : 'primary'}>
+            <Button type="submit" loading={loading} variant={step === 'redeem' ? 'primary' : step === 'refund' ? 'destructive' : 'primary'}>
               {step === 'prepare' ? 'Prepare HTLC' : step === 'redeem' ? 'Redeem' : 'Refund'}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setResult(null)}>Clear</Button>

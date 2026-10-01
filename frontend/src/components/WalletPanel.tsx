@@ -69,8 +69,8 @@ export function WalletPanel() {
 
   const vault = kv.vault;
   const addr = vault?.address ?? '';
-  const { data: utxos, loading: utxosLoading } = useUtxos(addr, 10000);
-  const { data: history, loading: historyLoading } = useHistory(addr, 10000);
+  const { data: utxos, isLoading: utxosLoading } = useUtxos(addr, 10000);
+  const { data: history, isLoading: historyLoading } = useHistory(addr, 10000);
 
   const idx = Number.isFinite(Number(index)) && Number(index) >= 0 ? Number(index) : 0;
   const pubHex = vault ? bytesToHex(vault.publicKey) : '';
@@ -211,7 +211,7 @@ export function WalletPanel() {
             />
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleUnlockStored} loading={busy}><Unlock size={16} /> Unlock</Button>
-              <Button variant="danger" onClick={() => { kv.forget(idx); setNotice('Stored vault removed from this device.'); }}>
+              <Button variant="destructive" onClick={() => { kv.forget(idx); setNotice('Stored vault removed from this device.'); }}>
                 <Trash2 size={16} /> Forget
               </Button>
             </div>

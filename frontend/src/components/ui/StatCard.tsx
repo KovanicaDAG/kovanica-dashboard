@@ -1,4 +1,5 @@
-import React from 'react';
+import React from "react";
+import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   label: string;
@@ -9,20 +10,20 @@ interface StatCardProps {
   className?: string;
 }
 
-export function StatCard({ label, value, trend, trendUp, icon, className = '' }: StatCardProps) {
+export function StatCard({ label, value, trend, trendUp, icon, className = "" }: StatCardProps) {
   return (
-    <div className={`stat-card ${className}`}>
+    <div className={cn("stat-card", className)}>
       <div className="flex items-start justify-between">
         <div>
           <p className="stat-label">{label}</p>
           <p className="stat-value font-mono">{value}</p>
           {trend && (
-            <p className={`text-xs mt-1 ${trendUp ? 'text-ok' : 'text-danger'}`}>
-              {trendUp ? '▲' : '▼'} {trend}
+            <p className={cn("text-xs mt-1", trendUp ? "text-kovanica-ok" : "text-kovanica-danger")}>
+              {trendUp ? "▲" : "▼"} {trend}
             </p>
           )}
         </div>
-        {icon && <div className="text-muted">{icon}</div>}
+        {icon && <div className="text-muted-foreground">{icon}</div>}
       </div>
     </div>
   );

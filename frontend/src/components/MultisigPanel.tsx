@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Badge, Table } from './ui';
-import { PanelTabs } from './ui/PanelTabs';
+import { PanelTabs } from '@/components/ui';
 import { Copy, AlertCircle, CheckCircle, Users, Plus, Minus, ShieldAlert } from 'lucide-react';
 import { postApi } from '../hooks/useApi';
 

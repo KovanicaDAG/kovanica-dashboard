@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Input, Button, Badge, Table, Select } from './ui';
-import { PanelTabs } from './ui/PanelTabs';
+import { Input, Button, Badge, Table, Select, SelectItem, PanelTabs } from '@/components/ui';
 import { Trash2 } from 'lucide-react';
 import { postApi } from '../hooks/useApi';
 
@@ -67,7 +66,7 @@ export function OpsPanel({}: OpsPanelProps) {
             placeholder="DASHBOARD_OPS_TOKEN"
             className="input w-full sm:w-96 max-w-full"
           />
-          <Button onClick={() => setOpsEnabled(!opsEnabled)} variant={opsEnabled ? 'danger' : 'primary'}>
+          <Button onClick={() => setOpsEnabled(!opsEnabled)} variant={opsEnabled ? 'destructive' : 'primary'}>
             {opsEnabled ? 'Disable' : 'Enable'}
           </Button>
         </div>
@@ -93,17 +92,15 @@ export function OpsPanel({}: OpsPanelProps) {
               activeTab={selectedAction}
               onTabChange={handleActionChange}
             />
-            <Select
-              label="Target Seed"
-              value={targetSeed}
-              onChange={e => setTargetSeed(e.target.value)}
-              options={seeds.map(s => ({ value: s.id, label: s.name }))}
-              className="w-48"
-            />
+            <Select value={targetSeed} onChange={setTargetSeed} className="w-48">
+            {seeds.map(s => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </Select>
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleOpsSubmit} loading={loading} variant={selectedAction === 'restart' ? 'danger' : 'primary'}>
+            <Button onClick={handleOpsSubmit} loading={loading} variant={selectedAction === 'restart' ? 'destructive' : 'primary'}>
               {selectedAction === 'restart' ? 'Restart Service' : selectedAction === 'diagnostics' ? 'Run Diagnostics' : 'Fetch Logs'}
             </Button>
             <Button variant="secondary" onClick={() => setResult(null)}>

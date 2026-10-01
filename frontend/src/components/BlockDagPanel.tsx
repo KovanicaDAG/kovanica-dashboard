@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
-import { PanelTabs } from './ui/PanelTabs';
-import { Button, Select, Badge } from './ui';
+import { PanelTabs, Button, Select, SelectItem, Badge } from '@/components/ui';
 import { ZoomIn, ZoomOut, RotateCcw, Target } from 'lucide-react';
 import type { ApiState, ApiDagBlock } from '../types';
 
@@ -15,7 +14,7 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
   const [viewMode, setViewMode] = useState<'graph' | 'list'>('graph');
   const handleViewModeChange = (id: string) => setViewMode(id as 'graph' | 'list');
   const [selectedBlock, setSelectedBlock] = useState<ApiDagBlock | null>(null);
-  const [filter, setFilter] = useState<'all' | 'blue' | 'red' | 'tips'>('all');
+  const [filter, setFilter] = useState<string>('all');
 
   const blocks = state?.node?.dag || [];
   const tips = state?.node?.tips || [];
@@ -151,17 +150,12 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
           <Badge variant={loading ? 'warn' : 'ok'}>{loading ? 'Loading…' : `${blocks.length} blocks`}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as any)}
-            options={[
-              { value: 'all', label: 'All Blocks' },
-              { value: 'blue', label: 'Blue Only' },
-              { value: 'red', label: 'Red Only' },
-              { value: 'tips', label: 'Tips Only' },
-            ]}
-            className="w-40"
-          />
+          <Select value={filter} onChange={setFilter} className="w-40">
+            <SelectItem value="all">All Blocks</SelectItem>
+            <SelectItem value="blue">Blue Only</SelectItem>
+            <SelectItem value="red">Red Only</SelectItem>
+            <SelectItem value="tips">Tips Only</SelectItem>
+          </Select>
           <Button variant="ghost" size="sm" onClick={() => setTransform(p => ({ ...p, scale: p.scale * 1.2 }))}><ZoomIn size={16} /></Button>
           <Button variant="ghost" size="sm" onClick={() => setTransform(p => ({ ...p, scale: p.scale / 1.2 }))}><ZoomOut size={16} /></Button>
           <Button variant="ghost" size="sm" onClick={resetView}><RotateCcw size={16} /></Button>

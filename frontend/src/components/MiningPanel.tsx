@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Badge, Table, StatCard } from './ui';
-import { PanelTabs } from './ui/PanelTabs';
+import { PanelTabs } from '@/components/ui';
 import { Pickaxe, Zap, Cpu, Database } from 'lucide-react';
 import { fmtKvnc, fmtNumber } from '../hooks/useApi';
 import { postApi } from '../hooks/useApi';

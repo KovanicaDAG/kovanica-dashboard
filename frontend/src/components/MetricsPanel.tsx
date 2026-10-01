@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, StatCard, Badge, Button } from './ui';
-import { PanelTabs } from './ui/PanelTabs';
+import { PanelTabs } from '@/components/ui';
 import { BarChart2, RefreshCw, ExternalLink } from 'lucide-react';
 import { fmtNumber } from '../hooks/useApi';
 

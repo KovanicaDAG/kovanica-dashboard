@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Table } from './ui/Table';
-import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Table } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fmtKvnc, fmtNumber } from '../hooks/useApi';
 import type { ApiState, ApiDagTx } from '../types';

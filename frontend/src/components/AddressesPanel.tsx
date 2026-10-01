@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Table } from './ui/Table';
-import { Badge } from './ui/Badge';
-import { PanelTabs } from './ui/PanelTabs';
-import { Button } from './ui/Button';
+import { Table } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { PanelTabs } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Search } from 'lucide-react';
 import { fmtKvnc } from '../hooks/useApi';
 import type { ApiState } from '../types';

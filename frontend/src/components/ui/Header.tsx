@@ -1,22 +1,18 @@
-import { Menu, Circle } from 'lucide-react';
-import type { WsState } from '../../hooks/useApi';
-import type { ApiHead } from '../../types';
+"use client";
 
-const WS_COLOR: Record<WsState, string> = {
-  connected: 'text-ok',
-  connecting: 'text-gold',
-  reconnecting: 'text-gold',
-  disconnected: 'text-danger',
-};
-
-const WS_LABEL: Record<WsState, string> = {
-  connected: 'WebSocket connected',
-  connecting: 'WebSocket connecting',
-  reconnecting: 'WebSocket reconnecting',
-  disconnected: 'WebSocket disconnected',
-};
+import React, { useEffect, useRef, useState } from "react";
+import { Menu, Wifi, WifiOff, Loader2, Circle, Sun, Moon, Monitor } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "./button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "./tooltip";
+import { useTheme } from "next-themes";
+import type { WsState } from "@/hooks/useApi";
+import type { ApiHead } from "@/types";
 
 interface HeaderProps {
+  onMenuClick: () => void;
+  menuButtonRef: React.RefObject<HTMLButtonElement>;
+  sidebarOpen: boolean;
   title: string;
   subtitle: string;
   network: string;
@@ -25,12 +21,19 @@ interface HeaderProps {
   fmtKvnc: (atoms: number) => string;
   lastBlock: string | null;
   txCount: number;
-  onMenuClick: () => void;
-  sidebarOpen: boolean;
-  menuButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
+const wsStateConfig: Record<WsState, { icon: React.ElementType; color: string; label: string }> = {
+  connecting: { icon: Loader2, color: "text-kovanica-gold", label: "Connecting…" },
+  connected: { icon: Wifi, color: "text-kovanica-ok", label: "Connected" },
+  reconnecting: { icon: Loader2, color: "text-kovanica-gold", label: "Reconnecting…" },
+  disconnected: { icon: WifiOff, color: "text-kovanica-danger", label: "Disconnected" },
+};
+
 export function Header({
+  onMenuClick,
+  menuButtonRef,
+  sidebarOpen,
   title,
   subtitle,
   network,
@@ -39,63 +42,132 @@ export function Header({
   fmtKvnc,
   lastBlock,
   txCount,
-  onMenuClick,
-  sidebarOpen,
-  menuButtonRef,
 }: HeaderProps) {
-  // The node reports ids like "kovanica-mainnet" / "kovanica-testnet".
-  const isMainnet = network.toLowerCase().includes('mainnet');
-  const networkColor = isMainnet ? 'text-net-mainnet' : 'text-net-testnet';
-  const networkBg = isMainnet ? 'bg-net-mainnet/10' : 'bg-net-testnet/10';
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const wsConfig = wsStateConfig[wsState];
+
+  const networkColors: Record<string, string> = {
+    "kovanica-mainnet": "text-kovanica-net-mainnet",
+    "kovanica-testnet": "text-kovanica-net-testnet",
+    "kovanica-devnet": "text-kovanica-blue",
+  };
+
+  const networkColor = networkColors[network] || "text-muted-foreground";
 
   return (
-    <header className="h-14 shrink-0 bg-surface border-b border-border flex items-center justify-between gap-2 px-3 sm:px-4">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <button
-          type="button"
-          ref={menuButtonRef}
-          onClick={onMenuClick}
-          className="btn-secondary p-2 min-h-[44px] min-w-[44px] shrink-0 lg:hidden"
-          aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={sidebarOpen}
-          aria-controls="dashboard-sidebar"
-        >
-          <Menu size={20} />
-        </button>
-        <div className="min-w-0">
-          <h1 className="font-display text-lg sm:text-xl font-medium text-fg truncate max-w-[50vw] sm:max-w-none">{title}</h1>
-          <p className="hidden sm:block text-xs text-muted truncate">{subtitle}</p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        {network && (
-          <div className={`flex items-center gap-2 px-2 py-1 rounded ${networkBg} ${networkColor}`}>
-            <Circle className="w-2 h-2" />
-            <span className="text-xs font-medium truncate max-w-[10rem]">{network}</span>
-          </div>
-        )}
-
-        <div
-          className="flex items-center gap-1"
-          title={WS_LABEL[wsState]}
-          aria-label={WS_LABEL[wsState]}
-          role="status"
-          aria-live="polite"
-        >
-          <Circle className={`w-2 h-2 ${WS_COLOR[wsState]}`} />
-          <span className="hidden sm:inline text-xs text-muted">WS</span>
+    <header className="h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border flex-shrink-0">
+      <div className="flex h-full items-center justify-between px-4 gap-4">
+        {/* Mobile menu button */}
+        <div className="lg:hidden">
+          <Button
+            ref={menuButtonRef}
+            variant="ghost"
+            size="icon"
+            onClick={onMenuClick}
+            aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={sidebarOpen}
+          >
+            <Menu size={20} />
+          </Button>
         </div>
 
-        {head && (
-          <div className="hidden md:flex items-center gap-4 text-xs text-muted">
-            <span>Tip: <code className="font-mono">{head.tip?.slice(0, 12)}…</code></span>
-            <span>Blocks: {head.blocks?.toLocaleString()}</span>
-            <span>Blue: {head.blue_score?.toLocaleString()}</span>
-            {lastBlock && <span className="text-ok">New: {lastBlock.slice(0, 8)}</span>}
-            {txCount > 0 && <span className="text-blue">TXs: {txCount}</span>}
+        {/* Title area */}
+        <div className="flex-1 min-w-0 lg:hidden">
+          <h1 className="font-display text-lg font-medium text-foreground truncate">{title}</h1>
+          <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+        </div>
+
+        {/* Desktop title area */}
+        <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center lg:gap-4">
+          <div className="text-center">
+            <h1 className="font-display text-xl font-medium text-foreground">{title}</h1>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
-        )}
+        </div>
+
+        {/* Status indicators */}
+        <div className="flex items-center gap-3 lg:gap-4">
+          {/* WebSocket Status */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <span className="flex items-center gap-1.5">
+                  <wsConfig.icon className={cn("h-4 w-4 animate-spin", wsState === "connected" || wsState === "disconnected" && "animate-none", wsConfig.color)} />
+                  <span className="hidden sm:inline text-xs font-medium">{wsConfig.label}</span>
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              <p>WebSocket: {wsConfig.label}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Network Badge */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Circle className={cn("h-2 w-2", networkColor)} />
+                <span className={cn("text-xs font-medium", networkColor)}>{network}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              <p>Network: {network}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Last Block Indicator */}
+          {lastBlock && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5 text-kovanica-gold">
+                  <span className="hidden sm:inline">#{lastBlock.slice(0, 8)}…</span>
+                  <span className="sm:hidden">📦</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="center">
+                <p>Latest block: {lastBlock}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Theme Toggle */}
+          {mounted && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+                >
+                  {resolvedTheme === "dark" ? (
+                    <Sun size={18} className="text-kovanica-gold" />
+                  ) : (
+                    <Moon size={18} className="text-kovanica-blue" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="center">
+                <p>Current: {resolvedTheme === "dark" ? "Dark" : "Light"} mode</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Desktop title fallback when sidebar is collapsed */}
+          <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:gap-4">
+            <div className="text-right">
+              <p className="font-display text-lg font-medium text-foreground">{title}</p>
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Table } from './ui/Table';
-import { Badge } from './ui/Badge';
-import { PanelTabs } from './ui/PanelTabs';
-import { StatCard } from './ui/StatCard';
+import { Table } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { PanelTabs } from '@/components/ui';
+import { StatCard } from '@/components/ui';
 import { Activity, Clock, AlertCircle } from 'lucide-react';
 import { fmtNumber, fmtKvnc } from '../hooks/useApi';
 import type { ApiState } from '../types';

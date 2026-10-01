@@ -2,6 +2,7 @@
 
 export interface ApiHead {
   network: string;
+  net?: string; // Legacy field
   genesis: string;
   tip: string;
   blocks: number;
@@ -162,13 +163,25 @@ export interface ApiNode {
   supply: number;
   token: string;
   decimals: number;
-  miner: string;
   atom: number;
   ui: string;
   utxos: number;
   chain_len: number;
   mempool: number;
   tx_count: number;
+  // PoA authority public key of the local node (KVP-101/authority.rs). This is
+  // the producer identity. There is NO `miner` field — an older revision of this
+  // interface declared one and panels rendered "—" forever because tsc cannot
+  // catch a field that is declared-but-never-sent. See scripts/api-contract.ts.
+  // Kept for backwards compatibility with old panels.
+  miner?: string;
+  authority_pk?: string;
+  admission?: string;
+  poa_enabled?: boolean;
+  // RFC-006 supply, as emitted by the node alongside `native_minted`.
+  circulating?: number;
+  burned?: number;
+  max_supply?: number;
   dag: ApiDagBlock[];
   order: string[];
   pending: string[];

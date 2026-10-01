@@ -24,7 +24,7 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha512 } from '@noble/hashes/sha2.js';
 import { hmac } from '@noble/hashes/hmac.js';
 import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
-import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { wordlist as english } from '@scure/bip39/wordlists/english';
 import { mnemonicToSeedSync, generateMnemonic, validateMnemonic } from '@scure/bip39';
 
 // WebCrypto subtle is async and the noble sync API is not; a cached promise
@@ -185,14 +185,14 @@ function vaultFromSeed(seed: Uint8Array, kind: 'mnemonic' | 'raw', index: number
 }
 
 export function createWalletFromMnemonic(mnemonic: string, index = 0): KeyVault {
-  if (!validateMnemonic(mnemonic, wordlist)) {
+  if (!validateMnemonic(mnemonic, english)) {
     throw new Error('invalid BIP-39 mnemonic (checksum or wordlist mismatch)');
   }
   return vaultFromSeed(mnemonicToSeedSync(mnemonic), 'mnemonic', index);
 }
 
 export function createNewMnemonic(strengthBits: 128 | 256 = 128): string {
-  return generateMnemonic(wordlist, strengthBits);
+  return generateMnemonic(english, strengthBits);
 }
 
 export function walletFromRawSeed(hex: string): KeyVault {
