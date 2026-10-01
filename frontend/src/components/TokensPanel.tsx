@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Badge, Input, Button, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { Table, Badge, Input, Button, Select, SelectItem, SelectContent, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Search } from 'lucide-react';
 import { fmtNumber, fmtKvnc } from '../hooks/useApi';
 import { useDexTokens } from '../hooks/useApi';
@@ -222,8 +222,13 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
                     required
                   />
                   <Select value={createForm.assetType} onChange={value => setCreateForm({ ...createForm, assetType: value })} className="w-full">
-                    <SelectItem value="fungible">Fungible Token</SelectItem>
-                    <SelectItem value="nft">NFT (KVP-106)</SelectItem>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select asset type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fungible">Fungible Token</SelectItem>
+                      <SelectItem value="nft">NFT (KVP-106)</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">

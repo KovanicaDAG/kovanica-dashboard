@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export function usePanelRoute(validIds: string[], defaultId: string) {
+  const [active, setActive] = useState<string>(() => {
+    if (typeof window === 'undefined') return defaultId;
+    const hash = window.location.hash;
+    if (!hash) return defaultId;
+    const id = hash.slice(1);
+    return validIds.includes(id) ? id : defaultId;
+  });
+
   const validate = useCallback(
     (raw: string | null): string => {
       if (!raw) return defaultId;
@@ -9,14 +17,6 @@ export function usePanelRoute(validIds: string[], defaultId: string) {
     },
     [validIds, defaultId],
   );
-
-  const [active, setActive] = useState<string>(() => {
-    if (typeof window === 'undefined') return defaultId;
-    const hash = window.location.hash;
-    const id = hash ? hash.slice(1) : null;
-    if (!id) return defaultId;
-    return validate(hash);
-  });
 
   const setActivePanel = useCallback(
     (id: string) => {

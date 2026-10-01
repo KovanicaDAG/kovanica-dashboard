@@ -211,8 +211,6 @@ export interface MeshState {
 
 export interface ApiState {
   selected: string;
-  mining: boolean;
-  faucet: boolean;
   allow_reset: boolean;
   operator: boolean;
   network: string;

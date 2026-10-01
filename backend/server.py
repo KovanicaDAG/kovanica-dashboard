@@ -19,9 +19,9 @@ from urllib.parse import urlparse, parse_qs
 
 # Testnet seed nodes
 SEED_NODES = {
-    "seed1": "127.0.0.1:8080",
-    "seed2": "127.0.0.1:8082",
-    "seed3": "127.0.0.1:8083",
+    "seed1": "127.0.0.1:3001",
+    "seed2": "76.13.250.65:3001",
+    "seed3": "187.7.27.139:3001",
 }
 
 STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
@@ -117,11 +117,27 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         self.send_error(HTTPStatus.NOT_FOUND)
 
+    def map_api_path(self, path):
+        """Map dashboard API paths to actual kovanica-node explorer API paths."""
+        # POST /api/submit -> /api/submit_tx
+        if path == "/api/submit":
+            return "/api/submit_tx"
+        # POST /api/prepare - not available on node, handled via mock
+        # POST /api/faucet - not available on node, handled via mock
+        # POST /api/htlc/* - not available on node, handled via mock
+        # POST /api/mine/*, /api/produce - node has /api/mine/submit
+        # POST /api/token/create - not possible via HTTP (requires coinbase)
+        # POST /api/multisig/* - these exist on node
+        return path
+
     def proxy_to_seed(self, method, path, body, seed=None):
         if seed is None:
             seed = "seed1"  # default
         host = SEED_NODES.get(seed, "127.0.0.1:8081")
-        url = f"http://{host}{path}"
+        
+        # Map dashboard API paths to actual node explorer API paths
+        mapped_path = self.map_api_path(path)
+        url = f"http://{host}{mapped_path}"
         req = urllib.request.Request(url, data=body, method=method)
         req.add_header("Content-Type", "application/json")
         req.add_header("Accept", "application/json")
@@ -162,6 +178,17 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # All seeds failed - return mock data for key endpoints
             api_path = path[5:] if path.startswith("/api/") else path
+            
+            # Handle endpoints that don't exist on the node
+            if method == "POST" and api_path == "prepare":
+                return self.handle_mock_post(api_path, body)
+            elif method == "POST" and api_path.startswith("htlc/"):
+                return self.handle_mock_htlc(api_path, body)
+            elif method == "POST" and api_path == "token/create":
+                return self.handle_mock_token_create(body)
+            elif method == "POST" and api_path.startswith("multisig/"):
+                # multisig endpoints exist on node, but provide mock if all seeds fail
+                return self.handle_mock_multisig(api_path, body)
             
             if api_path == "head":
                 mock = {
@@ -204,8 +231,6 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             elif api_path == "state":
                 mock = {
                     "selected": "testnet",
-                    "mining": False,
-                    "faucet": False,
                     "allow_reset": False,
                     "operator": False,
                     "network": "kovanica-testnet",
@@ -294,6 +319,94 @@ class CorsHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             t2.join()
         except Exception as e:
             self.send_error(HTTPStatus.BAD_GATEWAY, str(e))
+
+    def handle_mock_post(self, api_path, body):
+        """Handle POST endpoints that don't exist on the node."""
+        import json
+        
+        if api_path == "prepare":
+            # Mock prepare response - returns unsigned tx hex and sighash
+            # In reality, this would call node.prepare_transfer()
+            mock = {
+                "unsigned_tx": "01000000" + "00" * 200,  # placeholder unsigned tx
+                "sighash": "00" * 64,  # placeholder sighash
+                "fee": 2000,
+                "note": "Mock response - connect to a running kovanica-node for real transaction preparation"
+            }
+            data = json.dumps(mock).encode()
+            
+        else:
+            mock = {"error": f"Unknown mock endpoint: {api_path}"}
+            data = json.dumps(mock).encode()
+        
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_mock_htlc(self, api_path, body):
+        """Handle HTLC endpoints that don't exist on the node."""
+        import json
+        
+        # Parse action from path: htlc/create/prepare, htlc/claim/prepare, htlc/refund/prepare
+        parts = api_path.split("/")
+        action = parts[1] if len(parts) > 1 else "unknown"
+        
+        mock = {
+            "unsigned_tx": "01000000" + "00" * 200,
+            "sighash": "00" * 64,
+            "fee": 5000,
+            "action": action,
+            "note": f"Mock HTLC {action} preparation - connect to a running kovanica-node for real HTLC transactions"
+        }
+        data = json.dumps(mock).encode()
+        
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_mock_token_create(self, body):
+        """Handle token creation - not possible via simple HTTP on Kovanica."""
+        import json
+        
+        mock = {
+            "success": False,
+            "asset_id": None,
+            "error": "Token creation not available via HTTP API",
+            "note": "On Kovanica, token creation requires being a block producer (authority) and creating a coinbase transaction with a new asset_id. This cannot be done via a simple HTTP endpoint."
+        }
+        data = json.dumps(mock).encode()
+        
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_mock_multisig(self, api_path, body):
+        """Handle multisig endpoints - these exist on node but provide mock if all seeds fail."""
+        import json
+        
+        parts = api_path.split("/")
+        action = parts[1] if len(parts) > 1 else "unknown"
+        
+        mock = {
+            "unsigned_tx": "01000000" + "00" * 200,
+            "sighash": "00" * 64,
+            "fee": 5000,
+            "action": action,
+            "note": f"Mock multisig {action} - connect to a running kovanica-node for real multisig transactions"
+        }
+        data = json.dumps(mock).encode()
+        
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def send_json(self, data):
         body = json.dumps(data).encode()

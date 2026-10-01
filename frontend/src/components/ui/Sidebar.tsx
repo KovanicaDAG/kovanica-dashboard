@@ -67,13 +67,34 @@ function NavButton({ panel, isActive, onSelect }: { panel: Panel; isActive: bool
       className={cn(
         "nav-item",
         isActive
-          ? "bg-primary/10 text-primary border-l-2 border-primary"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          ? "bg-primary/15 text-primary border-l-2 border-primary shadow-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
       )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon size={16} />
-      <span className="truncate">{panel.label}</span>
+      <span className="shrink-0" style={{ flexShrink: 0 }}><Icon size={15} /></span>
+      <span className="truncate text-sm">{panel.label}</span>
+    </button>
+  );
+}
+
+function CompactNavButton({ panel, isActive, onSelect }: { panel: Panel; isActive: boolean; onSelect: (id: string) => void }) {
+  const Icon = iconMap[panel.icon] || iconMap.home;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(panel.id)}
+      className={cn(
+        "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-150",
+        isActive
+          ? "bg-primary text-primary-foreground shadow-md"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+      )}
+      aria-current={isActive ? "page" : undefined}
+      aria-label={panel.label}
+      title={panel.label}
+    >
+      <span style={isActive ? { filter: "drop-shadow(0 0 8px rgba(255,255,255,0.3))" } : undefined}><Icon size={18} /></span>
     </button>
   );
 }
@@ -84,42 +105,44 @@ export function Sidebar({ panels, groups, activePanel, onPanelChange, onClose, c
 
   return (
     <aside className="w-full h-full bg-card border-r border-border flex flex-col">
-      <div className="p-4 border-b border-border flex items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-medium text-foreground truncate">Navigation</h2>
+      <div className="p-3 border-b border-border flex items-center justify-between gap-2">
+        <h2 className="font-display text-base font-medium text-foreground truncate">Navigation</h2>
         {onClose && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] shrink-0"
+            className="min-h-[40px] min-w-[40px] shrink-0"
             aria-label="Close navigation"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </Button>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-thin" aria-label="Dashboard panels">
+      <nav className="flex-1 overflow-y-auto p-1.5 space-y-3 scrollbar-thin" aria-label="Dashboard panels">
         {sections.map((section) => (
-          <div key={section.label || "panels"} className="space-y-1">
+          <div key={section.label || "panels"} className="space-y-0.5">
             {section.label && (
-              <h3 className="px-3 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{section.label}</h3>
+              <h3 className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">{section.label}</h3>
             )}
-            {section.panels.map((panel) => (
-              <NavButton
-                key={panel.id}
-                panel={panel}
-                isActive={activePanel === panel.id}
-                onSelect={onPanelChange}
-              />
-            ))}
+            <div className="grid grid-cols-3 gap-1">
+              {section.panels.map((panel) => (
+                <CompactNavButton
+                  key={panel.id}
+                  panel={panel}
+                  isActive={activePanel === panel.id}
+                  onSelect={onPanelChange}
+                />
+              ))}
+            </div>
           </div>
         ))}
       </nav>
 
       {!compact && (
-        <div className="p-4 border-t border-border space-y-4">
-          <div className="space-y-2 text-xs">
+        <div className="p-3 border-t border-border space-y-3">
+          <div className="space-y-1.5 text-xs">
             {head && bootstrap && (
               <>
                 <div className="flex justify-between">
@@ -154,17 +177,17 @@ export function Sidebar({ panels, groups, activePanel, onPanelChange, onClose, c
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start"
+                  className="w-full justify-start gap-2"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 >
                   {theme === "dark" ? (
                     <>
-                      <Moon size={16} className="mr-2" />
+                      <Moon size={14} className="shrink-0" />
                       <span>Dark Mode</span>
                     </>
                   ) : (
                     <>
-                      <Sun size={16} className="mr-2" />
+                      <Sun size={14} className="shrink-0" />
                       <span>Light Mode</span>
                     </>
                   )}

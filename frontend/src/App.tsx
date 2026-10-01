@@ -1,4 +1,22 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+
+// Global error handler for debugging
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (e) => {
+    const div = document.createElement("div");
+    div.style.cssText = "position:fixed;top:0;left:0;right:0;background:red;color:white;padding:1rem;z-index:99999;font-family:monospace;font-size:14px;";
+    div.textContent = "JS Error: " + (e.message || e.error?.message || "unknown") + " at " + (e.filename || "") + ":" + (e.lineno || "");
+    document.body.appendChild(div);
+    console.error("Global error:", e);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const div = document.createElement("div");
+    div.style.cssText = "position:fixed;top:40px;left:0;right:0;background:orange;color:black;padding:1rem;z-index:99999;font-family:monospace;font-size:14px;";
+    div.textContent = "Unhandled Promise Rejection: " + (e.reason?.message || e.reason || "unknown");
+    document.body.appendChild(div);
+    console.error("Unhandled rejection:", e);
+  });
+}
 import { Layout } from "./components/ui/Layout";
 import { OverviewPanel } from "./components/OverviewPanel";
 import { BlockDagPanel } from "./components/BlockDagPanel";
@@ -11,8 +29,6 @@ import { ConsensusPanel } from "./components/ConsensusPanel";
 import { TokensPanel } from "./components/TokensPanel";
 import { HtlcPanel } from "./components/HtlcPanel";
 import { MultisigPanel } from "./components/MultisigPanel";
-import { FaucetPanel } from "./components/FaucetPanel";
-import { MiningPanel } from "./components/MiningPanel";
 import { ApiConsolePanel } from "./components/ApiConsolePanel";
 import { MetricsPanel } from "./components/MetricsPanel";
 import { OpsPanel } from "./components/OpsPanel";
@@ -45,8 +61,6 @@ const PANELS: Panel[] = [
   { id: "consensus", label: "Consensus", icon: "shield" },
   { id: "htlc", label: "HTLC", icon: "swap" },
   { id: "multisig", label: "Multisig", icon: "users-round" },
-  { id: "faucet", label: "Faucet", icon: "droplet" },
-  { id: "mining", label: "Mining", icon: "pickaxe" },
   { id: "api", label: "API Console", icon: "terminal" },
   { id: "metrics", label: "Metrics", icon: "bar-chart-2" },
   { id: "ops", label: "Ops", icon: "settings" },
@@ -91,8 +105,6 @@ const PANEL_GROUPS: PanelGroup[] = [
     panels: [
       { id: "api", label: "API Console", icon: "terminal" },
       { id: "metrics", label: "Metrics", icon: "bar-chart-2" },
-      { id: "faucet", label: "Faucet", icon: "droplet" },
-      { id: "mining", label: "Mining", icon: "pickaxe" },
     ],
   },
   { label: "Ops", panels: [{ id: "ops", label: "Ops", icon: "settings" }] },
@@ -223,10 +235,6 @@ function App() {
         return <HtlcPanel />;
       case "multisig":
         return <MultisigPanel />;
-      case "faucet":
-        return <FaucetPanel state={stateQuery.data ?? null} loading={loading} />;
-      case "mining":
-        return <MiningPanel state={stateQuery.data ?? null} loading={loading} />;
       case "api":
         return <ApiConsolePanel />;
       case "metrics":
@@ -239,25 +247,36 @@ function App() {
   };
 
   return (
-    <Layout
-      sidebarOpen={sidebarOpen}
-      onSidebarToggle={onSidebarToggle}
-      panels={PANELS}
-      panelGroups={PANEL_GROUPS}
-      activePanel={activePanel}
-      onPanelChange={onPanelChange}
-      title={activeLabel}
-      subtitle={subtitle}
-      network={network}
-      wsState={wsState}
-      head={head}
-      bootstrap={bootstrapQuery.data ?? null}
-      fmtKvnc={fmtKvnc}
-      lastBlock={lastBlock}
-      txCount={txCount}
-    >
-      {renderPanel()}
-    </Layout>
+    <>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: 32,
+        background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'monospace', fontSize: 12, zIndex: 9999,
+        borderBottom: '2px solid hsl(var(--border))'
+      }}>
+        🟢 React mounted • {new Date().toLocaleTimeString()} • active: {activePanel} • ws: {wsState}
+      </div>
+      <Layout
+        sidebarOpen={sidebarOpen}
+        onSidebarToggle={onSidebarToggle}
+        panels={PANELS}
+        panelGroups={PANEL_GROUPS}
+        activePanel={activePanel}
+        onPanelChange={onPanelChange}
+        title={activeLabel}
+        subtitle={subtitle}
+        network={network}
+        wsState={wsState}
+        head={head}
+        bootstrap={bootstrapQuery.data ?? null}
+        fmtKvnc={fmtKvnc}
+        lastBlock={lastBlock}
+        txCount={txCount}
+      >
+        {renderPanel()}
+      </Layout>
+    </>
   );
 }
 

@@ -264,25 +264,6 @@ export function useSubmitTx() {
   });
 }
 
-export function useFaucet() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (address: string) => {
-      const res = await fetch(`${API_BASE}/faucet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
-      });
-      if (!res.ok) throw new Error("Failed to request faucet");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["state"] });
-      queryClient.invalidateQueries({ queryKey: ["head"] });
-    },
-  });
-}
-
 export type WsState = "connecting" | "connected" | "reconnecting" | "disconnected";
 
 export function useWebSocket(onMessage: (msg: WsMsg) => void) {

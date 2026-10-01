@@ -125,7 +125,10 @@ export function OverviewPanel({ head, bootstrap, state, loading }: OverviewPanel
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in">
+    <div className="space-y-6 animate-in fade-in min-h-[400px]" style={{border: "1px solid hsl(var(--border))", borderRadius: "0.5rem", padding: "1rem"}}>
+      <div className="mb-4 p-2 bg-primary/10 rounded text-primary text-sm font-mono">
+        🔧 Dashboard mounted • {new Date().toLocaleTimeString()} • panel: overview
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div>
           <h2 className="font-display text-2xl font-medium text-foreground">Overview</h2>
