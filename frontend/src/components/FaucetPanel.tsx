@@ -30,7 +30,7 @@ export function FaucetPanel({ state, loading: _loading }: FaucetPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <h2 className="font-display text-2xl font-medium text-fg">Faucet (Testnet Only)</h2>
         <Badge variant={faucetEnabled ? 'ok' : 'danger'}>
           {faucetEnabled ? 'Enabled' : 'Disabled'}
@@ -48,7 +48,7 @@ export function FaucetPanel({ state, loading: _loading }: FaucetPanelProps) {
               value={address}
               onChange={e => setAddress(e.target.value)}
               placeholder="kvnc1... or kvnc..."
-              className="w-96"
+              className="input w-full sm:w-96 max-w-full"
             />
             <Button onClick={handleFaucet} loading={loadingFaucet} disabled={!faucetEnabled || !address}>
               Request 5 KVNC

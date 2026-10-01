@@ -44,7 +44,7 @@ export function MiningPanel({ state, loading: _loading }: MiningPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <h2 className="font-display text-2xl font-medium text-fg">Mining & Block Production</h2>
         <Badge variant={miningEnabled ? 'ok' : 'warn'}>
           {miningEnabled ? 'Mining Active' : 'Mining Disabled'}

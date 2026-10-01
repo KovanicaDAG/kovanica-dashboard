@@ -24,7 +24,7 @@ export function ConsensusPanel({ bootstrap, state, loading }: ConsensusPanelProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">Consensus / PoA</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>PoA Active</Badge>

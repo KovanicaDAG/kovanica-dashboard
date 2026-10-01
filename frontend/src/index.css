@@ -96,6 +96,33 @@
     @apply overflow-x-auto;
   }
 
+  /* Horizontal-scroll gutter: bleeds into the surrounding .panel padding so the
+     scrollbar spans full width while cell content stays aligned. The negative
+     margin is exactly the panel padding, so it never causes page-level scroll. */
+  .table-scroll {
+    @apply -mx-4 px-4;
+  }
+
+  .card-list-item {
+    @apply bg-surface-2 border border-border rounded-md p-3 space-y-2;
+  }
+
+  .card-list-row {
+    @apply flex items-center justify-between text-xs gap-3;
+  }
+
+  .card-list-label {
+    @apply text-muted shrink-0;
+  }
+
+  .card-list-value {
+    @apply font-mono text-fg truncate text-right min-w-0;
+  }
+
+  .nav-item {
+    @apply w-full min-h-[44px] flex items-center gap-3 px-3 rounded-md text-sm font-medium text-left transition-colors;
+  }
+
   table {
     @apply w-full text-sm;
   }

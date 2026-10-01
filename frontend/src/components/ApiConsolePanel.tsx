@@ -114,7 +114,7 @@ export function ApiConsolePanel() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <h2 className="font-display text-2xl font-medium text-fg">API Console</h2>
         <Badge variant="info">Live Proxy</Badge>
       </div>
@@ -151,7 +151,7 @@ export function ApiConsolePanel() {
         <div className="lg:col-span-2 space-y-4">
           {selectedEndpoint && (
             <div className="panel">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 min-w-0">
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant={selectedEndpoint.method === 'GET' ? 'ok' : 'warn'}>{selectedEndpoint.method}</Badge>

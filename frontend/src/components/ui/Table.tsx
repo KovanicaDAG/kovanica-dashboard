@@ -6,9 +6,15 @@ interface TableProps {
   keyField?: number;
   className?: string;
   emptyMessage?: string;
+  /** Render stacked cards below `sm`. Opt out for always-tables. Default true. */
+  responsive?: boolean;
 }
 
-export function Table({ headers, rows, keyField = 0, className = '', emptyMessage = 'No data' }: TableProps) {
+function cellText(cell: string | number): React.ReactNode {
+  return typeof cell === 'number' ? cell.toLocaleString() : cell;
+}
+
+export function Table({ headers, rows, keyField = 0, className = '', emptyMessage = 'No data', responsive = true }: TableProps) {
   if (rows.length === 0) {
     return (
       <div className="table-container">
@@ -18,29 +24,46 @@ export function Table({ headers, rows, keyField = 0, className = '', emptyMessag
   }
 
   return (
-    <div className={`table-container scrollbar-thin ${className}`}>
-      <table>
-        <thead>
-          <tr>
-            {headers.map((h, i) => <th key={i}>{h}</th>)}
-          </tr>
-        </thead>
-        <tbody>
+    <>
+      {responsive && (
+        <div className={`sm:hidden space-y-2 ${className}`}>
           {rows.map((row, i) => (
-            <tr key={row[keyField] as string | number}>
+            <div key={row[keyField] as string | number} className="card-list-item">
               {row.map((cell, j) => (
-                <td key={j}>
-                  {typeof cell === 'number' ? (
-                    <code className="font-mono">{cell.toLocaleString()}</code>
-                  ) : (
-                    <code className="font-mono">{cell}</code>
-                  )}
-                </td>
+                <div key={j} className="card-list-row">
+                  <span className="card-list-label">{headers[j] ?? `Column ${j + 1}`}</span>
+                  <span className="card-list-value" title={typeof cell === 'number' ? String(cell) : cell}>
+                    {cellText(cell)}
+                  </span>
+                </div>
               ))}
-            </tr>
+            </div>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      )}
+
+      <div
+        className={`${responsive ? 'hidden sm:block' : ''} table-container table-scroll scrollbar-thin ${className}`}
+      >
+        <table className="w-full min-w-[640px] md:min-w-[880px]">
+          <thead>
+            <tr>
+              {headers.map((h, i) => <th key={i}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row[keyField] as string | number}>
+                {row.map((cell, j) => (
+                  <td key={j}>
+                    <code className="font-mono">{cellText(cell)}</code>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

@@ -251,24 +251,43 @@ export function useFeeEstimate() {
   return { data, loading };
 }
 
+export type WsState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+
 export function useWebSocket(onMessage: (msg: WsMsg) => void) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number>();
+  const pingIntervalRef = useRef<number>();
+  const [state, setState] = useState<WsState>('connecting');
 
   useEffect(() => {
     let mounted = true;
 
+    /** Guard every state update so nothing lands after unmount. */
+    function setWsState(next: WsState) {
+      if (mounted) setState(next);
+    }
+
+    function clearPing() {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = undefined;
+      }
+    }
+
     function connect() {
       if (!mounted) return;
+      setWsState('connecting');
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (!mounted) return;
         console.log('[WS] Connected');
-        const pingInt = setInterval(() => {
+        setWsState('connected');
+        clearPing();
+        pingIntervalRef.current = window.setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
         }, 30000);
-        ws.onclose = () => clearInterval(pingInt);
       };
 
       ws.onmessage = (event) => {
@@ -285,18 +304,21 @@ export function useWebSocket(onMessage: (msg: WsMsg) => void) {
       };
 
       ws.onclose = () => {
+        clearPing();
+        if (!mounted) return;
         console.log('[WS] Disconnected, reconnecting in 5s...');
-        if (mounted) {
-          reconnectTimeoutRef.current = window.setTimeout(connect, 5000);
-        }
+        setWsState('reconnecting');
+        reconnectTimeoutRef.current = window.setTimeout(connect, 5000);
       };
     }
 
     connect();
     return () => {
       mounted = false;
+      clearPing();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       wsRef.current?.close();
+      setState('disconnected');
     };
   }, [onMessage]);
 
@@ -304,7 +326,7 @@ export function useWebSocket(onMessage: (msg: WsMsg) => void) {
     wsRef.current?.send(JSON.stringify(msg));
   }, []);
 
-  return { send };
+  return { send, state };
 }
 
 export async function postApi<T>(path: string, body: object): Promise<T | null> {

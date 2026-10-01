@@ -24,7 +24,7 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">Tokens & Assets</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>KVP-102/106</Badge>
@@ -52,7 +52,7 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
                 placeholder="Search DEX tokens…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="input pl-8 w-64"
+                className="input pl-8 w-full sm:w-64 max-w-full"
               />
             </div>
           </div>
@@ -90,7 +90,7 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
               value={tokenId}
               onChange={e => setTokenId(e.target.value)}
               placeholder="Enter token asset ID"
-              className="w-96"
+              className="input w-full sm:w-96 max-w-full"
             />
             <Button onClick={() => tokenId && window.open(`/api/token/${tokenId}`, '_blank')}>View Token</Button>
           </div>
@@ -106,7 +106,7 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
               value={nftId}
               onChange={e => setNftId(e.target.value)}
               placeholder="Enter NFT asset ID"
-              className="w-96"
+              className="input w-full sm:w-96 max-w-full"
             />
             <Button onClick={() => nftId && window.open(`/api/nft/${nftId}`, '_blank')}>View NFT</Button>
           </div>
@@ -122,7 +122,7 @@ export function TokensPanel({ state: _state, loading }: TokensPanelProps) {
               value={collectionId}
               onChange={e => setCollectionId(e.target.value)}
               placeholder="Enter collection ID"
-              className="w-96"
+              className="input w-full sm:w-96 max-w-full"
             />
             <Button onClick={() => collectionId && window.open(`/api/collection/${collectionId}`, '_blank')}>View Collection</Button>
           </div>

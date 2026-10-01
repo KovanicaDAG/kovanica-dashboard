@@ -47,7 +47,7 @@ export function OpsPanel({}: OpsPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <h2 className="font-display text-2xl font-medium text-fg">Operations (Token-Gated)</h2>
         <Badge variant={opsEnabled ? 'ok' : 'danger'}>
           {opsEnabled ? 'Enabled' : 'Disabled'}
@@ -65,7 +65,7 @@ export function OpsPanel({}: OpsPanelProps) {
             value={opsToken}
             onChange={e => setOpsToken(e.target.value)}
             placeholder="DASHBOARD_OPS_TOKEN"
-            className="w-96"
+            className="input w-full sm:w-96 max-w-full"
           />
           <Button onClick={() => setOpsEnabled(!opsEnabled)} variant={opsEnabled ? 'danger' : 'primary'}>
             {opsEnabled ? 'Disable' : 'Enable'}

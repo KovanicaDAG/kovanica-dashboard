@@ -64,6 +64,69 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
     window.addEventListener('mouseup', upHandler);
   };
 
+  /**
+   * Touch: one finger pans, two fingers pinch-zoom. Without this the graph is
+   * completely unusable on touch devices (wheel/mouse handlers never fire).
+   */
+  const touchState = useRef<{
+    dist: number;
+    startCx: number;
+    startCy: number;
+    startX: number;
+    startY: number;
+    startScale: number;
+  } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const base = { startX: transform.x, startY: transform.y, startScale: transform.scale };
+    if (e.touches.length === 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      touchState.current = {
+        ...base,
+        dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        startCx: (a.clientX + b.clientX) / 2,
+        startCy: (a.clientY + b.clientY) / 2,
+      };
+    } else if (e.touches.length === 1) {
+      touchState.current = {
+        ...base,
+        dist: 0,
+        startCx: e.touches[0].clientX,
+        startCy: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const st = touchState.current;
+    if (!st) return;
+    e.preventDefault();
+
+    if (e.touches.length === 2 && st.dist > 0) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const cx = (a.clientX + b.clientX) / 2;
+      const cy = (a.clientY + b.clientY) / 2;
+      const scale = Math.max(0.1, Math.min(5, st.startScale * (dist / st.dist)));
+      const ratio = scale / st.startScale;
+      // Keep the content point that was under the start midpoint pinned to the
+      // current midpoint, so the gesture feels anchored rather than drifting.
+      setTransform({
+        scale,
+        x: cx - (st.startCx - st.startX) * ratio,
+        y: cy - (st.startCy - st.startY) * ratio,
+      });
+    } else if (e.touches.length === 1) {
+      const dx = e.touches[0].clientX - st.startCx;
+      const dy = e.touches[0].clientY - st.startCy;
+      setTransform({ scale: st.startScale, x: st.startX + dx, y: st.startY + dy });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchState.current = null;
+  };
+
   const resetView = () => {
     setTransform({ x: 0, y: 0, scale: 1 });
   };
@@ -82,7 +145,7 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
 
   return (
     <div className="h-[calc(100vh-200px)] flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">BlockDAG Explorer</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>{loading ? 'Loading…' : `${blocks.length} blocks`}</Badge>
@@ -118,9 +181,13 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
       <div className="flex-1 overflow-hidden relative">
         {viewMode === 'graph' ? (
           <div
-            className="w-full h-full bg-surface border border-border rounded-lg"
+            className="w-full h-full bg-surface border border-border rounded-lg touch-none"
             onWheel={handleWheel}
             onMouseDown={handlePan}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             style={{ cursor: 'grab' }}
           >
             <svg
@@ -210,7 +277,7 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
           </div>
         ) : (
           <div className="w-full h-full bg-surface border border-border rounded-lg overflow-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] md:min-w-[880px] text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left p-2">Height</th>
@@ -248,8 +315,8 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
         )}
 
         {selectedBlock && (
-          <div className="absolute right-4 top-4 bottom-4 w-80 bg-surface border border-border rounded-lg shadow-xl p-4 overflow-auto animate-in slide-in-from-right">
-            <div className="flex items-center justify-between mb-4">
+          <div className="absolute right-4 top-4 bottom-4 w-80 max-w-[calc(100%-2rem)] bg-surface border border-border rounded-lg shadow-xl p-4 overflow-auto">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 min-w-0">
               <h3 className="font-display font-medium">Block Details</h3>
               <button onClick={() => setSelectedBlock(null)} className="text-muted hover:text-fg">×</button>
             </div>

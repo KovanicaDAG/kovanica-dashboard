@@ -24,7 +24,7 @@ export function AddressesPanel({ state, loading }: AddressesPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">Addresses</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>{wallets.length} wallets</Badge>
@@ -37,7 +37,7 @@ export function AddressesPanel({ state, loading }: AddressesPanelProps) {
               placeholder="Search addresses…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input pl-8 w-64"
+              className="input pl-8 w-full sm:w-64 max-w-full"
             />
           </div>
         </div>
@@ -52,7 +52,7 @@ export function AddressesPanel({ state, loading }: AddressesPanelProps) {
         onTabChange={() => {}}
       />
 
-      <div className="panel overflow-auto">
+      <div className="panel">
         <Table
           headers={['Address', 'Seed', 'Balance', 'Actions']}
           rows={filteredWallets.map(w => [
@@ -66,7 +66,7 @@ export function AddressesPanel({ state, loading }: AddressesPanelProps) {
 
       {selectedAddress && (
         <div className="panel">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4 min-w-0">
             <h3 className="font-display font-medium">UTXOs for {selectedAddress.slice(0, 16)}…</h3>
             <Button variant="ghost" size="sm" onClick={() => setSelectedAddress(null)}>Close</Button>
           </div>

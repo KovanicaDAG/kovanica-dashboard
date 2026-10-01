@@ -59,7 +59,7 @@ export function BlocksPanel({ state, loading }: BlocksPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">Blocks</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>{blocks.length} blocks</Badge>
@@ -72,7 +72,7 @@ export function BlocksPanel({ state, loading }: BlocksPanelProps) {
               placeholder="Search blocks…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="input pl-8 w-64"
+              className="input pl-8 w-full sm:w-64 max-w-full"
             />
           </div>
         </div>
@@ -89,7 +89,7 @@ export function BlocksPanel({ state, loading }: BlocksPanelProps) {
         onTabChange={() => {}}
       />
 
-      <div className="panel overflow-auto">
+      <div className="panel">
         <Table
           headers={['Height', 'ID', 'Blue', 'Parents', 'TXs', 'Miner', 'Timestamp', 'Blue Score']}
           rows={paginatedBlocks.map(b => [

@@ -35,7 +35,7 @@ export function MultisigPanel({}: MultisigPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <h2 className="font-display text-2xl font-medium text-fg">Multisig (KVP-101)</h2>
         <Badge variant="info">M-of-N P2SH</Badge>
       </div>

@@ -4,7 +4,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fmtNumber, fmtKvnc } from '../hooks/useApi';
+import { fmtKvnc } from '../hooks/useApi';
 import type { ApiState, ApiHistoryTx } from '../types';
 
 interface TransactionsPanelProps {
@@ -80,7 +80,7 @@ export function TransactionsPanel({ state, loading }: TransactionsPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-2xl font-medium text-fg">Transactions</h2>
           <Badge variant={loading ? 'warn' : 'ok'}>{allTxs.length} transactions</Badge>
@@ -93,13 +93,13 @@ export function TransactionsPanel({ state, loading }: TransactionsPanelProps) {
               placeholder="Search transactions…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="input pl-8 w-64"
+              className="input pl-8 w-full sm:w-64 max-w-full"
             />
           </div>
         </div>
       </div>
 
-      <div className="panel overflow-auto">
+      <div className="panel">
         <Table
           headers={['Block', 'TX ID', 'Amount', 'Fee', 'Asset', 'Time']}
           rows={paginatedTxs.map(t => [

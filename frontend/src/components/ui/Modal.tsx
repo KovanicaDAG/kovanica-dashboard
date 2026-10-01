@@ -35,7 +35,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div
-        className={`w-full ${sizeClasses[size]} bg-surface border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95`}
+        className={`w-full ${sizeClasses[size]} bg-surface border border-border rounded-xl shadow-2xl overflow-hidden`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

@@ -17,24 +17,20 @@ import { ApiConsolePanel } from './components/ApiConsolePanel';
 import { MetricsPanel } from './components/MetricsPanel';
 import { OpsPanel } from './components/OpsPanel';
 import { useHead, useBootstrap, useStateNode, useWebSocket, fmtKvnc } from './hooks/useApi';
+import { usePanelRoute } from './hooks/usePanelRoute';
 import type { WsMsg } from './types';
-
-interface Panel {
-  id: string;
-  label: string;
-  icon: string;
-}
+import type { Panel, PanelGroup } from './components/ui/Sidebar';
 
 const PANELS: Panel[] = [
   { id: 'overview', label: 'Overview', icon: 'home' },
   { id: 'blockdag', label: 'BlockDAG', icon: 'git-branch' },
   { id: 'blocks', label: 'Blocks', icon: 'database' },
   { id: 'txs', label: 'Transactions', icon: 'activity' },
-  { id: 'addresses', label: 'Addresses', icon: 'users' },
   { id: 'mempool', label: 'Mempool', icon: 'clock' },
+  { id: 'addresses', label: 'Addresses', icon: 'users' },
+  { id: 'tokens', label: 'Tokens', icon: 'coins' },
   { id: 'network', label: 'Network', icon: 'globe' },
   { id: 'consensus', label: 'Consensus', icon: 'shield' },
-  { id: 'tokens', label: 'Tokens', icon: 'coins' },
   { id: 'htlc', label: 'HTLC', icon: 'swap' },
   { id: 'multisig', label: 'Multisig', icon: 'users-round' },
   { id: 'faucet', label: 'Faucet', icon: 'droplet' },
@@ -44,18 +40,97 @@ const PANELS: Panel[] = [
   { id: 'ops', label: 'Ops', icon: 'settings' },
 ];
 
-type PanelId = Panel['id'];
+const PANEL_GROUPS: PanelGroup[] = [
+  {
+    label: 'Chain',
+    panels: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'blockdag', label: 'BlockDAG', icon: 'git-branch' },
+      { id: 'blocks', label: 'Blocks', icon: 'database' },
+      { id: 'txs', label: 'Transactions', icon: 'activity' },
+      { id: 'mempool', label: 'Mempool', icon: 'clock' },
+    ],
+  },
+  {
+    label: 'Data & Identity',
+    panels: [
+      { id: 'addresses', label: 'Addresses', icon: 'users' },
+      { id: 'tokens', label: 'Tokens', icon: 'coins' },
+    ],
+  },
+  {
+    label: 'Network & Consensus',
+    panels: [
+      { id: 'network', label: 'Network', icon: 'globe' },
+      { id: 'consensus', label: 'Consensus', icon: 'shield' },
+    ],
+  },
+  {
+    label: 'DeFi & Interop',
+    panels: [
+      { id: 'htlc', label: 'HTLC', icon: 'swap' },
+      { id: 'multisig', label: 'Multisig', icon: 'users-round' },
+    ],
+  },
+  {
+    label: 'Tools & Dev',
+    panels: [
+      { id: 'api', label: 'API Console', icon: 'terminal' },
+      { id: 'metrics', label: 'Metrics', icon: 'bar-chart-2' },
+      { id: 'faucet', label: 'Faucet', icon: 'droplet' },
+      { id: 'mining', label: 'Mining', icon: 'pickaxe' },
+    ],
+  },
+  { label: 'Ops', panels: [{ id: 'ops', label: 'Ops', icon: 'settings' }] },
+];
+
+const VALID_IDS = PANELS.map((p) => p.id);
+
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
+function isDesktop(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia(DESKTOP_QUERY).matches;
+}
+
+type PanelId = (typeof PANELS)[number]['id'];
+
+function deriveNetwork(head: any, bootstrap: any): string {
+  const candidates: unknown[] = [
+    head?.network,
+    head?.net,
+    bootstrap?.network,
+    bootstrap?.net,
+    bootstrap?.network_id,
+    bootstrap?.chain_id,
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim().length > 0) return c.trim();
+  }
+  const genesis = bootstrap?.genesis || head?.genesis;
+  if (typeof genesis === 'string' && genesis.includes('mainnet')) return 'kovanica-mainnet';
+  if (typeof genesis === 'string' && genesis.includes('testnet')) return 'kovanica-testnet';
+  return 'unknown';
+}
 
 function App() {
-  const [activePanel, setActivePanel] = useState<PanelId>('overview');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activePanel, setActivePanelRoute] = usePanelRoute(VALID_IDS, 'overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    setSidebarOpen(mq.matches);
+    const onChange = (ev: MediaQueryListEvent) => setSidebarOpen(ev.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const { data: head, loading: headLoading } = useHead(5000);
   const { data: bootstrap, loading: bootLoading } = useBootstrap(5000);
   const { data: state, loading: stateLoading } = useStateNode(5000);
   const loading = headLoading || bootLoading || stateLoading;
 
-  const [wsConnected, setWsConnected] = useState(false);
   const [lastBlock, setLastBlock] = useState<string | null>(null);
   const [txCount, setTxCount] = useState(0);
 
@@ -65,48 +140,89 @@ function App() {
         setLastBlock(msg.id);
         break;
       case 'tx':
-        setTxCount(c => c + 1);
+        setTxCount((c) => c + 1);
         break;
       case 'tip':
-        break;
       case 'peer':
-        break;
       case 'state':
         break;
     }
   }, []);
 
-  useWebSocket(handleWsMessage);
+  const { state: wsState } = useWebSocket(handleWsMessage);
 
-  useEffect(() => {
-    const int = setInterval(() => setWsConnected(Math.random() > 0.1), 5000);
-    return () => clearInterval(int);
-  }, []);
+  const onPanelChange = useCallback(
+    (id: PanelId | string) => {
+      setActivePanelRoute(id);
+      if (!isDesktop()) setSidebarOpen(false);
+    },
+    [setActivePanelRoute],
+  );
+
+  const onSidebarToggle = useCallback(() => setSidebarOpen((o) => !o), []);
+
+  const network = deriveNetwork(head, bootstrap);
+  const activeLabel = PANELS.find((p) => p.id === activePanel)?.label ?? 'Overview';
+  const blockCount = head?.blocks ?? state?.node?.blocks ?? 0;
+  const subtitle = `${network}${blockCount > 0 ? ` • ${blockCount.toLocaleString()} blocks` : ''}`;
 
   const renderPanel = () => {
     switch (activePanel) {
-      case 'overview': return <OverviewPanel head={head} bootstrap={bootstrap} state={state} loading={loading} />;
-      case 'blockdag': return <BlockDagPanel state={state} loading={loading} />;
-      case 'blocks': return <BlocksPanel state={state} loading={loading} />;
-      case 'txs': return <TransactionsPanel state={state} loading={loading} />;
-      case 'addresses': return <AddressesPanel state={state} loading={loading} />;
-      case 'mempool': return <MempoolPanel state={state} loading={loading} />;
-      case 'network': return <NetworkPanel bootstrap={bootstrap} state={state} loading={loading} />;
-      case 'consensus': return <ConsensusPanel bootstrap={bootstrap} state={state} loading={loading} />;
-      case 'tokens': return <TokensPanel state={state} loading={loading} />;
-      case 'htlc': return <HtlcPanel />;
-      case 'multisig': return <MultisigPanel />;
-      case 'faucet': return <FaucetPanel state={state} loading={loading} />;
-      case 'mining': return <MiningPanel state={state} loading={loading} />;
-      case 'api': return <ApiConsolePanel />;
-      case 'metrics': return <MetricsPanel />;
-      case 'ops': return <OpsPanel />;
-      default: return <OverviewPanel head={head} bootstrap={bootstrap} state={state} loading={loading} />;
+      case 'overview':
+        return <OverviewPanel head={head} bootstrap={bootstrap} state={state} loading={loading} />;
+      case 'blockdag':
+        return <BlockDagPanel state={state} loading={loading} />;
+      case 'blocks':
+        return <BlocksPanel state={state} loading={loading} />;
+      case 'txs':
+        return <TransactionsPanel state={state} loading={loading} />;
+      case 'addresses':
+        return <AddressesPanel state={state} loading={loading} />;
+      case 'mempool':
+        return <MempoolPanel state={state} loading={loading} />;
+      case 'network':
+        return <NetworkPanel bootstrap={bootstrap} state={state} loading={loading} />;
+      case 'consensus':
+        return <ConsensusPanel bootstrap={bootstrap} state={state} loading={loading} />;
+      case 'tokens':
+        return <TokensPanel state={state} loading={loading} />;
+      case 'htlc':
+        return <HtlcPanel />;
+      case 'multisig':
+        return <MultisigPanel />;
+      case 'faucet':
+        return <FaucetPanel state={state} loading={loading} />;
+      case 'mining':
+        return <MiningPanel state={state} loading={loading} />;
+      case 'api':
+        return <ApiConsolePanel />;
+      case 'metrics':
+        return <MetricsPanel />;
+      case 'ops':
+        return <OpsPanel />;
+      default:
+        return <OverviewPanel head={head} bootstrap={bootstrap} state={state} loading={loading} />;
     }
   };
 
   return (
-    <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
+    <Layout
+      sidebarOpen={sidebarOpen}
+      onSidebarToggle={onSidebarToggle}
+      panels={PANELS}
+      panelGroups={PANEL_GROUPS}
+      activePanel={activePanel}
+      onPanelChange={onPanelChange}
+      title={activeLabel}
+      subtitle={subtitle}
+      network={network}
+      wsState={wsState}
+      head={head}
+      bootstrap={bootstrap}
+      fmtKvnc={fmtKvnc}
+      lastBlock={lastBlock}
+      txCount={txCount}
+    >
       {renderPanel()}
     </Layout>
   );
