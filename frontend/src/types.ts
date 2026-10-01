@@ -7,11 +7,17 @@ export interface ApiHead {
   blocks: number;
   min_fee: number;
   atom: number;
+  // RFC-006 supply. The node emits these as `native_minted` / `circulating` /
+  // `burned` / `max_supply` on /api/bootstrap; `normalizeSupply` in hooks/useApi
+  // aliases the unprefixed spellings onto the canonical native_* names.
   native_minted?: number;
   native_total?: number;
   native_circulating?: number;
   native_burned?: number;
   native_max_supply?: number;
+  circulating?: number;
+  burned?: number;
+  max_supply?: number;
   subsidy?: number;
   blue_score?: number;
   k?: number;

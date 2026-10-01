@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from './components/ui';
 import { OverviewPanel } from './components/OverviewPanel';
 import { BlockDagPanel } from './components/BlockDagPanel';
@@ -18,6 +18,7 @@ import { MetricsPanel } from './components/MetricsPanel';
 import { OpsPanel } from './components/OpsPanel';
 import { useHead, useBootstrap, useStateNode, useWebSocket, fmtKvnc } from './hooks/useApi';
 import { usePanelRoute } from './hooks/usePanelRoute';
+import type { ApiHead } from './types';
 import type { WsMsg } from './types';
 import type { Panel, PanelGroup } from './components/ui/Sidebar';
 
@@ -126,10 +127,20 @@ function App() {
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
-  const { data: head, loading: headLoading } = useHead(5000);
+  const { data: headRaw, loading: headLoading } = useHead(5000);
   const { data: bootstrap, loading: bootLoading } = useBootstrap(5000);
   const { data: state, loading: stateLoading } = useStateNode(5000);
   const loading = headLoading || bootLoading || stateLoading;
+
+  // /api/head does not emit blue_score — it lives on /api/state's node object.
+  // Header, Sidebar and Overview all read `head.blue_score`, so backfill it here
+  // where both responses are in scope.
+  const head = useMemo<ApiHead | null>(() => {
+    if (!headRaw) return null;
+    if (typeof headRaw.blue_score === 'number') return headRaw;
+    const fromState = state?.node?.blue_score;
+    return typeof fromState === 'number' ? { ...headRaw, blue_score: fromState } : headRaw;
+  }, [headRaw, state]);
 
   const [lastBlock, setLastBlock] = useState<string | null>(null);
   const [txCount, setTxCount] = useState(0);

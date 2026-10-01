@@ -9,6 +9,34 @@ import type {
 const API_BASE = '/api';
 const WS_URL = '/ws';
 
+// Node builds expose RFC-006 supply under two spellings. `explorer.rs` emits
+// `circulating` / `burned` / `max_supply` on /api/bootstrap, while older builds
+// (and the dashboard's own mock payloads) use the `native_`-prefixed form.
+// Components read the canonical `native_*` names, so alias whichever the node
+// actually sent. Without this the supply cards silently render 0.
+function num(...vals: unknown[]): number | undefined {
+  for (const v of vals) {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+  }
+  return undefined;
+}
+
+function normalizeSupply<T extends object>(raw: T): T {
+  if (!raw) return raw;
+  const r = raw as Record<string, unknown>;
+  const circulating = num(r.native_circulating, r.circulating);
+  const burned = num(r.native_burned, r.burned);
+  const maxSupply = num(r.native_max_supply, r.max_supply);
+  const minted = num(r.native_minted, r.total, r.minted);
+  return {
+    ...r,
+    ...(circulating !== undefined ? { native_circulating: circulating } : {}),
+    ...(burned !== undefined ? { native_burned: burned } : {}),
+    ...(maxSupply !== undefined ? { native_max_supply: maxSupply } : {}),
+    ...(minted !== undefined ? { native_minted: minted } : {}),
+  } as T;
+}
+
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -47,7 +75,7 @@ export function useBootstrap(pollMs = 5000) {
     let mounted = true;
     async function load() {
       const d = await fetchJson<ApiBootstrap>('/bootstrap');
-      if (mounted) { setData(d); setLoading(false); }
+      if (mounted) { setData(d && normalizeSupply(d)); setLoading(false); }
     }
     load();
     const id = setInterval(load, pollMs);
@@ -65,7 +93,7 @@ export function useStateNode(pollMs = 5000) {
     let mounted = true;
     async function load() {
       const d = await fetchJson<ApiState>('/state');
-      if (mounted) { setData(d); setLoading(false); }
+      if (mounted) { setData(d && normalizeSupply(d)); setLoading(false); }
     }
     load();
     const id = setInterval(load, pollMs);
