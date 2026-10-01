@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type {
   ApiHead, ApiBootstrap, ApiState, ApiUtxos, ApiHistory,
-  ApiAddress, ApiNft, ApiCollection, ApiToken, ApiDexToken,
+  ApiAddress, ApiNft, ApiCollection, ApiToken, ApiDexToken, ApiNetwork,
   FeeEstimate, WsMsg, ApiNode, SupplyData
 } from '../types';
 
@@ -94,6 +94,29 @@ export function useStateNode(pollMs = 5000) {
     async function load() {
       const d = await fetchJson<ApiState>('/state');
       if (mounted) { setData(d && normalizeSupply(d)); setLoading(false); }
+    }
+    load();
+    const id = setInterval(load, pollMs);
+    return () => { mounted = false; clearInterval(id); };
+  }, [pollMs]);
+
+  return { data, loading };
+}
+
+/**
+ * `GET /api/network` — the only endpoint exposing the PoA authority set
+ * (bootstrap returns `authority_set: null`). Polls a little faster than the
+ * other hooks because the slot clock is what drives the consensus view.
+ */
+export function useNetwork(pollMs = 4000) {
+  const [data, setData] = useState<ApiNetwork | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const d = await fetchJson<ApiNetwork>('/network');
+      if (mounted) { setData(d); setLoading(false); }
     }
     load();
     const id = setInterval(load, pollMs);
@@ -250,8 +273,9 @@ export function useDexTokens() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const d = await fetchJson<ApiDexToken[]>('/dex/tokens');
-      if (mounted) { setData(d); setLoading(false); }
+      // The endpoint returns `{ tokens: [...] }`, not a bare array.
+      const d = await fetchJson<{ tokens: ApiDexToken[] }>('/dex/tokens');
+      if (mounted) { setData(d?.tokens ?? []); setLoading(false); }
     }
     load();
     const id = setInterval(load, 10000);

@@ -58,48 +58,93 @@ export interface ApiTx {
   fee: number;
 }
 
+/** One output of a DAG transaction, as the node reports it. */
+export interface ApiDagTxOutput {
+  value: number;
+  owner: string;
+}
+
+/** A transaction embedded in a DAG block. */
+export interface ApiDagTx {
+  id: string;
+  coinbase: boolean;
+  inputs: number;
+  outputs: ApiDagTxOutput[];
+}
+
+/**
+ * A DAG vertex as the node actually reports it.
+ *
+ * The block's position in the chain is its index in `node.order` — the node does
+ * not emit a per-block `height`. Chain height is available separately as
+ * `state.node.chain_len`. The timestamp field is `timestamp_ms` (milliseconds,
+ * not seconds), and blue/red is reported as `colour`.
+ */
 export interface ApiDagBlock {
   id: string;
   parents: string[];
-  height: number;
+  selected_parent: string | null;
   blue_score: number;
-  timestamp: number;
-  miner: string;
-  txs: string[];
-  is_blue: boolean;
-  selected_parent: string;
-  authority_sig?: string;
+  /** "genesis" | "blue" | "red" */
+  colour: string;
+  timestamp_ms: number;
+  nonce: number;
+  work: number;
+  txs: ApiDagTx[];
 }
 
+/**
+ * A single unspent output as the node actually reports it.
+ *
+ * The node returns a FLAT shape (tx + index + value at the top level), not the
+ * nested `outpoint`/`output` nesting a reader might assume. The address is
+ * echoed back in hex even when a `kvnc…dag` address was queried.
+ */
 export interface ApiUtxo {
-  outpoint: { tx: string; index: number };
-  output: ApiOutput;
-  height: number;
-  is_coinbase: boolean;
+  tx: string;
+  index: number;
+  value: number;
+  /** Native KVNC is the literal "KVNC", not null. */
+  asset_id: string | null;
+  kind: string | null;
+  metadata_hash: string | null;
+  collection_id: string | null;
 }
 
 export interface ApiUtxos {
   address: string;
+  /** Native balance in atoms. */
   balance: number;
+  /** Per-asset balances, keyed by asset id. */
+  balances?: Record<string, number>;
   utxos: ApiUtxo[];
-  balances?: Array<{ asset_id: string | null; balance: number }>;
+  limit?: number;
+  offset?: number;
+  total?: number;
 }
 
+/** One address-history event, matching the node's flat event shape. */
 export interface ApiHistoryTx {
-  id: string;
-  height: number;
-  timestamp: number;
-  is_sender: boolean;
-  counterparty: string;
-  amount: number;
-  fee: number;
+  block: string;
+  tx: string;
+  /** "coinbase", "send", "receive", … */
+  kind: string;
+  /** Signed atom delta — positive for received, negative for sent. */
+  delta: number;
   asset_id: string | null;
+  asset_kind: string | null;
+  metadata_hash: string | null;
+  collection_id: string | null;
 }
 
 export interface ApiHistory {
   address: string;
   balance: number;
+  balances?: Record<string, number>;
   txs: ApiHistoryTx[];
+  limit?: number;
+  offset?: number;
+  total?: number;
 }
 
 export interface ApiNode {
@@ -164,6 +209,34 @@ export interface ApiState {
   node: ApiNode;
   wallets: Array<{ seed: number; address: string; balance: number }>;
   source?: string;
+}
+
+/**
+ * PoA authority set as reported by `GET /api/network`.
+ *
+ * This is the ONLY endpoint that carries the authority surface — `/api/bootstrap`
+ * returns `authority_set: null`, so anything reading the set from bootstrap
+ * silently sees nothing.
+ */
+export interface ApiAuthoritySet {
+  authorities: string[];
+  threshold: number;
+  count: number;
+  hash: string;
+}
+
+/** `GET /api/network` — network identity, PoA authority set and slot clock. */
+export interface ApiNetwork {
+  network: string;
+  genesis: string;
+  tip: string;
+  blue_score: number;
+  peers: string[];
+  authority_set: ApiAuthoritySet | null;
+  current_slot: number;
+  slot_duration_ms: number;
+  time_to_next_slot_ms: number;
+  next_slot_timestamp_ms: number;
 }
 
 export interface ApiAddress {

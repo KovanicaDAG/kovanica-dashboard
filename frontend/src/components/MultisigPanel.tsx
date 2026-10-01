@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Input, Button, Badge, Table } from './ui';
 import { PanelTabs } from './ui/PanelTabs';
-import { Copy, AlertCircle, CheckCircle, Users, Plus, Minus } from 'lucide-react';
+import { Copy, AlertCircle, CheckCircle, Users, Plus, Minus, ShieldAlert } from 'lucide-react';
 import { postApi } from '../hooks/useApi';
 
 interface MultisigPanelProps {}
@@ -113,20 +113,24 @@ export function MultisigPanel({}: MultisigPanelProps) {
               </>
             )}
             {step === 'sign' && (
-              <>
-                <Input
-                  label="Transaction (hex)"
-                  value={formData.script}
-                  onChange={e => setFormData({ ...formData, script: e.target.value })}
-                  placeholder="Unsigned tx hex"
-                />
-                <Input
-                  label="Private Key (hex)"
-                  value={formData.pubkeys[0]}
-                  onChange={e => setFormData({ ...formData, pubkeys: [e.target.value, ...formData.pubkeys.slice(1)] })}
-                  placeholder="Ed25519 private key"
-                />
-              </>
+              <div className="md:col-span-2 rounded-lg border border-gold/40 bg-gold/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-gold">
+                  <ShieldAlert size={18} aria-hidden />
+                  <h4 className="font-medium text-fg">Co-signing is node-side custody</h4>
+                </div>
+                <p className="text-sm text-muted">
+                  KVP-101 partial signatures are produced by a node that already holds the
+                  co-signing key. This dashboard deliberately does not accept a private key:
+                  pasting one here would ship it to the backend and the node, and any browser
+                  holding a cosigner key for a P2SH spend is a standing liability.
+                </p>
+                <p className="text-sm text-muted">
+                  To produce a partial signature, run the co-signer against the unsigned
+                  transaction hex on the machine that custodies that key, then paste the
+                  returned <code className="font-mono text-fg">partial_sig_hex</code> into the
+                  Combine step.
+                </p>
+              </div>
             )}
             {step === 'combine' && (
               <>
@@ -164,7 +168,13 @@ export function MultisigPanel({}: MultisigPanelProps) {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" loading={loading} variant="primary">
+            <Button
+              type="submit"
+              loading={loading}
+              variant="primary"
+              disabled={step === 'sign'}
+              title={step === 'sign' ? 'Co-signing runs on the key-custoding node' : undefined}
+            >
               {step === 'create' ? 'Create Multisig' : step === 'build' ? 'Build Tx' : step === 'sign' ? 'Sign' : step === 'combine' ? 'Combine' : 'Submit'}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setResult(null)}>Clear</Button>
@@ -186,7 +196,7 @@ export function MultisigPanel({}: MultisigPanelProps) {
         <ol className="space-y-2 text-sm text-muted list-decimal list-inside">
           <li><strong>Create:</strong> Generate M-of-N redeem script from N pubkeys</li>
           <li><strong>Build:</strong> Create unsigned transaction spending to multisig address</li>
-          <li><strong>Sign:</strong> Each party signs with their private key</li>
+          <li><strong>Sign:</strong> Node-side — each co-signing key produces a partial signature on the host that custodies it</li>
           <li><strong>Combine:</strong> Aggregate signatures into final witness</li>
           <li><strong>Submit:</strong> Broadcast fully signed transaction</li>
         </ol>

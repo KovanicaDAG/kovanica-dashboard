@@ -9,14 +9,27 @@ interface BlocksPanelProps {
   loading: boolean;
 }
 
+/**
+ * A DAG block plus its position in the node's canonical linearization order.
+ *
+ * The node's `/api/state` `dag` array is `Dag::linearize()` output, and each
+ * entry carries no per-block height — height is a property of the selected-parent
+ * chain, which a mergeset block's index does not represent. We therefore present
+ * `pos` as a linearized position rather than mislabelling it "Height".
+ */
+type BlockRow = ApiDagBlock & { pos: number };
+
 export function BlocksPanel({ state, loading }: BlocksPanelProps) {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [search, setSearch] = useState('');
-  const [sortBy, _setSortBy] = useState<'height' | 'blue_score' | 'timestamp' | 'txs'>('height');
+  const [sortBy, _setSortBy] = useState<'pos' | 'blue_score' | 'timestamp' | 'txs'>('pos');
   const [sortDir, _setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const blocks: ApiDagBlock[] = state?.node?.dag || [];
+  const blocks: BlockRow[] = useMemo(
+    () => (state?.node?.dag || []).map((b, i) => ({ ...b, pos: i + 1 })),
+    [state?.node?.dag],
+  );
 
   const filteredBlocks = useMemo(() => {
     let result = [...blocks];
@@ -24,16 +37,15 @@ export function BlocksPanel({ state, loading }: BlocksPanelProps) {
       const s = search.toLowerCase();
       result = result.filter(b =>
         b.id.toLowerCase().includes(s) ||
-        b.height.toString().includes(s) ||
-        (b.miner || '').toLowerCase().includes(s)
+        b.pos.toString().includes(s)
       );
     }
     result.sort((a, b) => {
-      const getVal = (block: ApiDagBlock, key: string): string | number => {
+      const getVal = (block: BlockRow, key: string): string | number => {
         switch (key) {
-          case 'height': return block.height;
+          case 'pos': return block.pos;
           case 'blue_score': return block.blue_score;
-          case 'timestamp': return block.timestamp;
+          case 'timestamp': return block.timestamp_ms;
           case 'txs': return block.txs.length;
           default: return '';
         }
@@ -91,16 +103,16 @@ export function BlocksPanel({ state, loading }: BlocksPanelProps) {
 
       <div className="panel">
         <Table
-          headers={['Height', 'ID', 'Blue', 'Parents', 'TXs', 'Miner', 'Timestamp', 'Blue Score']}
+          headers={['Pos', 'ID', 'Colour', 'Parents', 'TXs', 'Timestamp', 'Blue Score', 'Work']}
           rows={paginatedBlocks.map(b => [
-            b.height,
+            fmtNumber(b.pos),
             b.id.slice(0, 16) + '…',
-            b.is_blue ? 'Blue' : 'Red',
+            b.colour,
             b.parents.length,
             b.txs.length,
-            b.miner.slice(0, 12) + '…',
-            new Date(b.timestamp * 1000).toLocaleString(),
+            new Date(b.timestamp_ms).toLocaleString(),
             fmtNumber(b.blue_score),
+            fmtNumber(b.work),
           ])}
         />
       </div>

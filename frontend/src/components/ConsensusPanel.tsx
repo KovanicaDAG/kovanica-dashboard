@@ -1,126 +1,172 @@
 import { Table, StatCard, Badge } from './ui';
-import { Shield, Users, Clock, Hash } from 'lucide-react';
-import { fmtNumber, fmtKvnc } from '../hooks/useApi';
-import type { ApiBootstrap, ApiState } from '../types';
+import { Shield, Users, Clock, Hash, Info } from 'lucide-react';
+import { fmtNumber } from '../hooks/useApi';
+import type { ApiState, ApiNetwork } from '../types';
 
 interface ConsensusPanelProps {
-  bootstrap: ApiBootstrap | null;
+  network: ApiNetwork | null;
   state: ApiState | null;
   loading: boolean;
 }
 
-export function ConsensusPanel({ bootstrap, state, loading }: ConsensusPanelProps) {
-  const authorities = bootstrap?.authorities || [];
-  const threshold = bootstrap?.authority_threshold || 2;
-  const slotDuration = bootstrap?.slot_duration || 3000;
-  const currentSlot = state?.node?.blue_score ? Math.floor(state.node.blue_score / 10) : 0;
-  const miner = state?.node?.miner || '—';
+/**
+ * Read-only view of the PoA authority set.
+ *
+ * The authority surface lives on `/api/network` — `/api/bootstrap` returns
+ * `authority_set: null`, so reading it from there yields nothing at all. This
+ * panel is deliberately read-only: authority signing keys live in mode-0600
+ * `EnvironmentFile`s on the seed hosts and are never exposed to a browser, so
+ * there is nothing here a user could act on beyond inspecting the set.
+ *
+ * The slot schedule below is FORWARD-LOOKING. The node's explorer payload
+ * carries no per-block producer field, so "slots owned so far" cannot be
+ * derived from the API and is not shown.
+ */
+export function ConsensusPanel({ network, state, loading }: ConsensusPanelProps) {
+  const set = network?.authority_set ?? null;
+  const authorities = set?.authorities ?? [];
+  const threshold = set?.threshold ?? 0;
+  const slotDuration = network?.slot_duration_ms ?? 0;
+  const currentSlot = network?.current_slot ?? 0;
 
-  const authorityOwners = authorities.map((auth: string, i: number) => ({
-    authority: auth.slice(0, 12) + '…',
-    slots: Math.floor(Math.random() * 100),
-    lastBlock: '—',
-  }));
+  /**
+   * PoA eligibility is round-robin over the authority list, in the order the
+   * node reports it: `active_authority(slot) = authorities[slot % len]`
+   * (crates/kovanica-dag/src/authority.rs). List order is consensus-significant
+   * — the permutation-invariance test depends on it — so it is rendered
+   * exactly as received and never sorted.
+   */
+  const SCHEDULE_AHEAD = 12;
+  const schedule = authorities.map((pk, i) => {
+    // Next slot this authority is scheduled for, at or after the current slot.
+    const offset = (i - (currentSlot % authorities.length) + authorities.length) % authorities.length;
+    return {
+      pubKey: pk,
+      index: i,
+      nextSlot: currentSlot + offset,
+      offset,
+      isNow: offset === 0,
+    };
+  }).sort((a, b) => a.nextSlot - b.nextSlot).slice(0, SCHEDULE_AHEAD);
+
+  const statCards = [
+    {
+      label: 'Authorities',
+      value: set ? `${set.count}` : '—',
+      trend: `threshold ${threshold} of ${set?.count ?? 0}`,
+      icon: <Users size={24} className="text-blue" />,
+    },
+    {
+      label: 'Slot Duration',
+      value: slotDuration ? `${fmtNumber(slotDuration)} ms` : '—',
+      trend: 'fixed, no gap-fill',
+      icon: <Clock size={24} className="text-gold" />,
+    },
+    {
+      label: 'Current Slot',
+      value: fmtNumber(currentSlot),
+      trend: network ? `${fmtNumber(network.time_to_next_slot_ms)} ms to next` : 'waiting for node',
+      icon: <Clock size={24} className="text-gold" />,
+    },
+    {
+      label: 'Blue Score',
+      value: fmtNumber(network?.blue_score ?? 0),
+      trend: `chain ${fmtNumber(state?.node?.chain_len ?? 0)}`,
+      icon: <Hash size={24} className="text-blue" />,
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-2xl font-medium text-fg">Consensus / PoA</h2>
-          <Badge variant={loading ? 'warn' : 'ok'}>PoA Active</Badge>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Authorities"
-          value={authorities.length}
-          trend={`Threshold: ${threshold}`}
-          icon={<Users size={24} className="text-blue" />}
-        />
-        <StatCard
-          label="Slot Duration"
-          value={`${slotDuration}ms`}
-          trend={`~${Math.floor(60000 / slotDuration)} slots/min`}
-          icon={<Clock size={24} className="text-teal" />}
-        />
-        <StatCard
-          label="Current Miner"
-          value={miner.slice(0, 12) + '…'}
-          icon={<Shield size={24} className="text-ok" />}
-        />
-        <StatCard
-          label="Blue Score"
-          value={fmtNumber(state?.node?.blue_score || 0)}
-          trend="Consensus progress"
-          icon={<Hash size={24} className="text-gold" />}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {statCards.map((c) => (
+          <StatCard key={c.label} label={c.label} value={c.value} trend={c.trend} icon={c.icon} />
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Authority Set</h3>
+        <section className="panel">
+          <div className="flex flex-wrap items-center justify-between gap-2 min-w-0 mb-4">
+            <h2 className="text-lg font-display flex items-center gap-2">
+              <Shield size={18} className="text-gold" />
+              Authority Set
+            </h2>
+            {set && <Badge variant="ok">PoA active</Badge>}
           </div>
-          {authorities.length > 0 ? (
-            <Table
-              headers={['Authority PubKey', 'Index', 'Status']}
-              rows={authorities.map((auth: string, i: number) => [
-                auth.slice(0, 16) + '…',
-                i.toString(),
-                i < threshold ? 'Active' : 'Standby',
-              ])}
-            />
-          ) : (
-            <p className="text-muted text-center py-8">No authorities configured</p>
-          )}
-        </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Consensus Parameters</h3>
-          </div>
+          {!set ? (
+            <p className="text-sm text-muted">
+              {loading ? 'Loading authority set…' : 'This node reports no authority set.'}
+            </p>
+          ) : (
+            <>
+              <Table
+                headers={['#', 'Authority Public Key', 'Next Slot']}
+                rows={schedule.map((s) => [
+                  String(s.index),
+                  s.pubKey,
+                  s.isNow ? `${fmtNumber(s.nextSlot)} (now)` : fmtNumber(s.nextSlot),
+                ])}
+              />
+              <dl className="mt-4 space-y-2 text-xs">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Threshold</dt>
+                  <dd className="font-mono">{threshold} of {set.count}</dd>
+                </div>
+                <div className="flex justify-between gap-4 min-w-0">
+                  <dt className="text-muted shrink-0">Set hash</dt>
+                  <dd className="font-mono truncate">{set.hash}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Schedule rule</dt>
+                  <dd className="font-mono text-right">authorities[slot % {set.count}]</dd>
+                </div>
+              </dl>
+            </>
+          )}
+        </section>
+
+        <section className="panel">
+          <h2 className="text-lg font-display mb-4">Consensus Parameters</h2>
           <Table
             headers={['Parameter', 'Value']}
             rows={[
-              ['Consensus', 'PoA (GHOSTDAG k=3)'],
-              ['Authorities', authorities.length.toString()],
-              ['Threshold', threshold.toString()],
-              ['Slot Duration', `${slotDuration}ms`],
-              ['Current Slot', currentSlot.toString()],
-              ['Miner', miner.slice(0, 16) + '…'],
-              ['Blue Score', fmtNumber(state?.node?.blue_score || 0)],
-              ['Chain Length', fmtNumber(state?.node?.chain_len || 0)],
-              ['Selected Tip', state?.node?.selected_tip?.slice(0, 16) + '…' || '—'],
+              ['Consensus', 'Proof of Authority'],
+              ['Authorities', set ? String(set.count) : '—'],
+              ['Threshold', set ? `${threshold} of ${set.count}` : '—'],
+              ['Slot duration', slotDuration ? `${fmtNumber(slotDuration)} ms` : '—'],
+              ['Current slot', fmtNumber(currentSlot)],
+              ['Next slot at', network ? new Date(network.next_slot_timestamp_ms).toISOString() : '—'],
+              ['Blue score', fmtNumber(network?.blue_score ?? 0)],
+              ['Chain length', fmtNumber(state?.node?.chain_len ?? 0)],
+              ['GHOSTDAG k', String(state?.node?.k ?? 3)],
+              ['Selected tip', (state?.node?.selected_tip || '—').slice(0, 16)],
             ]}
           />
-        </div>
+        </section>
       </div>
 
-      <div className="panel">
-        <div className="panel-header">
-          <h3 className="panel-title">Authority Ownership Matrix</h3>
+      <section className="panel border-l-2 border-l-gold">
+        <div className="flex items-start gap-3">
+          <Info size={18} className="text-gold shrink-0 mt-0.5" />
+          <div className="space-y-2 text-sm">
+            <h3 className="font-display">This view is read-only, and that is by design</h3>
+            <p className="text-muted">
+              Block production is PoA: an authority signs a 64-byte signature over the block
+              hash, and the node admits it only if the signer is the one scheduled for
+              that slot. Those signing keys are held in mode-0600 <code>EnvironmentFile</code>s
+              on the seed hosts and are never sent to a browser, so this dashboard cannot
+              act as a validator and deliberately offers no way to enter a key.
+            </p>
+            <p className="text-muted">
+              The schedule above is computed forward from the current slot with the
+              consensus rule. Historical "slots owned" per authority is not shown because
+              the explorer's block payload carries no producer field — it is not knowable
+              from the API, and it is not estimated here.
+            </p>
+          </div>
         </div>
-        <Table
-          headers={['Authority', 'Slots Owned', 'Last Block', 'Status']}
-          rows={authorityOwners.map(a => [
-            a.authority,
-            fmtNumber(a.slots),
-            a.lastBlock,
-            'Active',
-          ])}
-        />
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <h3 className="panel-title">Slot Schedule</h3>
-        </div>
-        <p className="text-muted text-center py-8">
-          Slot schedule visualization would show upcoming authority rotations.
-          Requires parsing authority set from bootstrap and current slot from blue_score.
-        </p>
-      </div>
+      </section>
     </div>
   );
 }

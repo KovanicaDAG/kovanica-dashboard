@@ -16,7 +16,9 @@ import { MiningPanel } from './components/MiningPanel';
 import { ApiConsolePanel } from './components/ApiConsolePanel';
 import { MetricsPanel } from './components/MetricsPanel';
 import { OpsPanel } from './components/OpsPanel';
-import { useHead, useBootstrap, useStateNode, useWebSocket, fmtKvnc } from './hooks/useApi';
+import { WalletPanel } from './components/WalletPanel';
+import { AssetsPanel } from './components/AssetsPanel';
+import { useHead, useBootstrap, useStateNode, useNetwork, useWebSocket, fmtKvnc } from './hooks/useApi';
 import { usePanelRoute } from './hooks/usePanelRoute';
 import type { ApiHead } from './types';
 import type { WsMsg } from './types';
@@ -28,8 +30,10 @@ const PANELS: Panel[] = [
   { id: 'blocks', label: 'Blocks', icon: 'database' },
   { id: 'txs', label: 'Transactions', icon: 'activity' },
   { id: 'mempool', label: 'Mempool', icon: 'clock' },
+  { id: 'wallet', label: 'Wallet', icon: 'wallet' },
   { id: 'addresses', label: 'Addresses', icon: 'users' },
   { id: 'tokens', label: 'Tokens', icon: 'coins' },
+  { id: 'assets', label: 'Multi-Asset', icon: 'layers' },
   { id: 'network', label: 'Network', icon: 'globe' },
   { id: 'consensus', label: 'Consensus', icon: 'shield' },
   { id: 'htlc', label: 'HTLC', icon: 'swap' },
@@ -55,8 +59,10 @@ const PANEL_GROUPS: PanelGroup[] = [
   {
     label: 'Data & Identity',
     panels: [
+      { id: 'wallet', label: 'Wallet', icon: 'wallet' },
       { id: 'addresses', label: 'Addresses', icon: 'users' },
       { id: 'tokens', label: 'Tokens', icon: 'coins' },
+      { id: 'assets', label: 'Multi-Asset', icon: 'layers' },
     ],
   },
   {
@@ -84,6 +90,9 @@ const PANEL_GROUPS: PanelGroup[] = [
   },
   { label: 'Ops', panels: [{ id: 'ops', label: 'Ops', icon: 'settings' }] },
 ];
+
+// The sidebar renders from PANEL_GROUPS; PANELS is the flat id list used for
+// route validation. Every panel must appear in both or it is unreachable.
 
 const VALID_IDS = PANELS.map((p) => p.id);
 
@@ -130,7 +139,8 @@ function App() {
   const { data: headRaw, loading: headLoading } = useHead(5000);
   const { data: bootstrap, loading: bootLoading } = useBootstrap(5000);
   const { data: state, loading: stateLoading } = useStateNode(5000);
-  const loading = headLoading || bootLoading || stateLoading;
+  const { data: netInfo, loading: networkLoading } = useNetwork(4000);
+  const loading = headLoading || bootLoading || stateLoading || networkLoading;
 
   // /api/head does not emit blue_score — it lives on /api/state's node object.
   // Header, Sidebar and Overview all read `head.blue_score`, so backfill it here
@@ -189,12 +199,16 @@ function App() {
         return <TransactionsPanel state={state} loading={loading} />;
       case 'addresses':
         return <AddressesPanel state={state} loading={loading} />;
+      case 'wallet':
+        return <WalletPanel />;
+      case 'assets':
+        return <AssetsPanel />;
       case 'mempool':
         return <MempoolPanel state={state} loading={loading} />;
       case 'network':
         return <NetworkPanel bootstrap={bootstrap} state={state} loading={loading} />;
       case 'consensus':
-        return <ConsensusPanel bootstrap={bootstrap} state={state} loading={loading} />;
+        return <ConsensusPanel network={netInfo} state={state} loading={loading} />;
       case 'tokens':
         return <TokensPanel state={state} loading={loading} />;
       case 'htlc':

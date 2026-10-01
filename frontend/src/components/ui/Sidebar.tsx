@@ -1,4 +1,4 @@
-import { ChevronLeft, Home, GitBranch, Database, Activity, Users, Clock, Globe, Shield, Coins, ArrowRightLeft, UsersRound, Droplet, Pickaxe, Terminal, BarChart2, Settings } from 'lucide-react';
+import { ChevronLeft, Home, GitBranch, Database, Activity, Users, Clock, Globe, Shield, Coins, Wallet, Layers, ArrowRightLeft, UsersRound, Droplet, Pickaxe, Terminal, BarChart2, Settings } from 'lucide-react';
 import type { ApiHead, ApiBootstrap } from '../../types';
 
 export interface Panel {
@@ -35,6 +35,8 @@ const iconMap: Record<string, (props: { size?: number }) => React.ReactElement> 
   globe: (props) => <Globe {...props} />,
   shield: (props) => <Shield {...props} />,
   coins: (props) => <Coins {...props} />,
+  wallet: (props) => <Wallet {...props} />,
+  layers: (props) => <Layers {...props} />,
   swap: (props) => <ArrowRightLeft {...props} />,
   'arrow-right-left': (props) => <ArrowRightLeft {...props} />,
   'users-round': (props) => <UsersRound {...props} />,

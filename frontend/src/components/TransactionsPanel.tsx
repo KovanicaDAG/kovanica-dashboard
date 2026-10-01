@@ -4,41 +4,55 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fmtKvnc } from '../hooks/useApi';
-import type { ApiState, ApiHistoryTx } from '../types';
+import { fmtKvnc, fmtNumber } from '../hooks/useApi';
+import type { ApiState, ApiDagTx } from '../types';
 
 interface TransactionsPanelProps {
   state: ApiState | null;
   loading: boolean;
 }
 
+/**
+ * A transaction lifted out of the DAG payload, with the block it was found in.
+ *
+ * Built from `/api/state` rather than `/api/history`, which is per-address. Note
+ * what the node does and does not expose here: `inputs` is a COUNT, not a list
+ * of valued outpoints, and there is no fee field. So fee and per-input amounts
+ * are not derivable from this payload, and this panel deliberately shows only
+ * what the node actually reports rather than fabricating zeros.
+ */
+type TxRow = ApiDagTx & {
+  blockPos: number;
+  blockId: string;
+  timestamp: number;
+  totalOutput: number;
+  outputCount: number;
+};
+
 export function TransactionsPanel({ state, loading }: TransactionsPanelProps) {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [search, setSearch] = useState('');
-  const [sortBy, _setSortBy] = useState<'timestamp' | 'amount' | 'fee' | 'height'>('timestamp');
+  const [sortBy, _setSortBy] = useState<'timestamp' | 'output' | 'pos'>('pos');
   const [sortDir, _setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const allTxs = useMemo(() => {
-    const txs: Array<ApiHistoryTx & { blockHeight: number; blockId: string }> = [];
-    state?.node?.dag?.forEach(block => {
-      block.txs.forEach(txId => {
+    const txs: TxRow[] = [];
+    (state?.node?.dag || []).forEach((block, i) => {
+      block.txs.forEach(tx => {
+        const outputs = tx.outputs || [];
         txs.push({
-          id: txId,
-          height: block.height,
-          timestamp: block.timestamp,
-          is_sender: false,
-          counterparty: '',
-          amount: 0,
-          fee: 0,
-          asset_id: null,
-          blockHeight: block.height,
+          ...tx,
+          blockPos: i + 1,
           blockId: block.id,
+          timestamp: block.timestamp_ms,
+          totalOutput: outputs.reduce((sum, o) => sum + (o.value || 0), 0),
+          outputCount: outputs.length,
         });
       });
     });
     return txs;
-  }, [state]);
+  }, [state?.node?.dag]);
 
   const filteredTxs = useMemo(() => {
     let result = [...allTxs];
@@ -46,16 +60,16 @@ export function TransactionsPanel({ state, loading }: TransactionsPanelProps) {
       const s = search.toLowerCase();
       result = result.filter(t =>
         t.id.toLowerCase().includes(s) ||
-        t.blockHeight.toString().includes(s)
+        t.blockPos.toString().includes(s) ||
+        t.blockId.toLowerCase().includes(s)
       );
     }
     result.sort((a, b) => {
-      const getVal = (tx: any, key: string): string | number => {
+      const getVal = (tx: TxRow, key: string): string | number => {
         switch (key) {
           case 'timestamp': return tx.timestamp;
-          case 'amount': return tx.amount;
-          case 'fee': return tx.fee;
-          case 'height': return tx.height;
+          case 'output': return tx.totalOutput;
+          case 'pos': return tx.blockPos;
           default: return '';
         }
       };
@@ -101,14 +115,15 @@ export function TransactionsPanel({ state, loading }: TransactionsPanelProps) {
 
       <div className="panel">
         <Table
-          headers={['Block', 'TX ID', 'Amount', 'Fee', 'Asset', 'Time']}
+          headers={['Block', 'TX ID', 'Type', 'In', 'Out', 'Total Output', 'Time']}
           rows={paginatedTxs.map(t => [
-            t.blockHeight,
+            fmtNumber(t.blockPos),
             t.id.slice(0, 16) + '…',
-            fmtKvnc(t.amount),
-            fmtKvnc(t.fee),
-            t.asset_id?.slice(0, 12) + '…' || 'KVNC',
-            new Date(t.timestamp * 1000).toLocaleString(),
+            t.coinbase ? 'Coinbase' : 'Transfer',
+            t.inputs,
+            t.outputCount,
+            fmtKvnc(t.totalOutput),
+            new Date(t.timestamp).toLocaleString(),
           ])}
         />
       </div>

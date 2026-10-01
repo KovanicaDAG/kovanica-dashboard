@@ -31,8 +31,8 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
   };
 
   const filteredBlocks = blocks.filter(b => {
-    if (filter === 'blue') return b.is_blue;
-    if (filter === 'red') return !b.is_blue;
+    if (filter === 'blue') return b.colour === 'blue';
+    if (filter === 'red') return b.colour === 'red';
     if (filter === 'tips') return tips.includes(b.id);
     return true;
   });
@@ -231,7 +231,7 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
                   ? '#F2A900'
                   : isTip
                   ? '#7d9a7a'
-                  : block.is_blue
+                  : block.colour === 'blue'
                   ? '#2fbaa4'
                   : '#b08980';
 
@@ -258,7 +258,7 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
                       fontFamily="monospace"
                       pointerEvents="none"
                     >
-                      {block.height}
+                      {idx + 1}
                     </text>
                     <text
                       x={20} y={38}
@@ -290,23 +290,23 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
                 </tr>
               </thead>
               <tbody>
-                {filteredBlocks.slice().reverse().map(block => (
+                {filteredBlocks.slice().reverse().map((block, i) => (
                   <tr
                     key={block.id}
                     onClick={() => setSelectedBlock(block)}
                     className={`hover:bg-surface-2 cursor-pointer ${selectedBlock?.id === block.id ? 'bg-accent/10' : ''}`}
                   >
-                    <td className="p-2 font-mono">{block.height}</td>
+                    <td className="p-2 font-mono">{filteredBlocks.length - i}</td>
                     <td className="p-2 font-mono">{block.id.slice(0, 16)}…</td>
                     <td className="p-2">
-                      <Badge variant={block.is_blue ? 'ok' : 'danger'}>
-                        {block.is_blue ? 'Blue' : 'Red'}
+                      <Badge variant={block.colour === 'blue' ? 'ok' : 'danger'}>
+                        {block.colour === 'genesis' ? 'Genesis' : block.colour === 'blue' ? 'Blue' : 'Red'}
                       </Badge>
                     </td>
                     <td className="p-2 font-mono text-xs">{block.parents.length}</td>
                     <td className="p-2">{block.txs.length}</td>
-                    <td className="p-2 font-mono text-xs">{block.miner.slice(0, 12)}…</td>
-                    <td className="p-2 text-muted">{new Date(block.timestamp * 1000).toLocaleTimeString()}</td>
+                    <td className="p-2 font-mono text-xs">{block.work}</td>
+                    <td className="p-2 text-muted">{new Date(block.timestamp_ms).toLocaleTimeString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -322,17 +322,14 @@ export function BlockDagPanel({ state, loading }: BlockDagPanelProps) {
             </div>
             <div className="space-y-3 text-sm">
               <div><span className="text-muted">ID:</span> <code className="font-mono block break-all">{selectedBlock.id}</code></div>
-              <div><span className="text-muted">Height:</span> <code className="font-mono">{selectedBlock.height}</code></div>
               <div><span className="text-muted">Blue Score:</span> <code className="font-mono">{selectedBlock.blue_score}</code></div>
-              <div><span className="text-muted">Status:</span> <Badge variant={selectedBlock.is_blue ? 'ok' : 'danger'}>{selectedBlock.is_blue ? 'Blue' : 'Red'}</Badge></div>
+              <div><span className="text-muted">Status:</span> <Badge variant={selectedBlock.colour === 'blue' ? 'ok' : 'danger'}>{selectedBlock.colour === 'genesis' ? 'Genesis' : selectedBlock.colour === 'blue' ? 'Blue' : 'Red'}</Badge></div>
               <div><span className="text-muted">Parents:</span> <div className="text-xs text-muted">{selectedBlock.parents.map(p => p.slice(0, 12) + '…').join(', ')}</div></div>
-              <div><span className="text-muted">Selected Parent:</span> <code className="font-mono text-xs">{selectedBlock.selected_parent.slice(0, 12)}…</code></div>
+              <div><span className="text-muted">Selected Parent:</span> <code className="font-mono text-xs">{selectedBlock.selected_parent ? selectedBlock.selected_parent.slice(0, 12) + '…' : 'none (genesis)'}</code></div>
               <div><span className="text-muted">TXs:</span> {selectedBlock.txs.length}</div>
-              <div><span className="text-muted">Miner:</span> <code className="font-mono text-xs">{selectedBlock.miner}</code></div>
-              <div><span className="text-muted">Timestamp:</span> {new Date(selectedBlock.timestamp * 1000).toLocaleString()}</div>
-              {selectedBlock.authority_sig && (
-                <div><span className="text-muted">Auth Sig:</span> <code className="font-mono text-xs">{selectedBlock.authority_sig.slice(0, 16)}…</code></div>
-              )}
+              <div><span className="text-muted">Work:</span> <code className="font-mono text-xs">{selectedBlock.work}</code></div>
+              <div><span className="text-muted">Nonce:</span> <code className="font-mono text-xs">{selectedBlock.nonce}</code></div>
+              <div><span className="text-muted">Timestamp:</span> {new Date(selectedBlock.timestamp_ms).toLocaleString()}</div>
             </div>
           </div>
         )}
